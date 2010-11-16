@@ -1,6 +1,6 @@
 CirclePackJS
 ============
-#### CirclePackJS: N00bs Pwned. Circles Packed.
+#### `CirclePackJS`: N00bs Pwned. Circles Packed.
 
 `CirclePackJS` is a Circle Packing algorithm in javascript.
 
