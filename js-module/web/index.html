@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head>
+	<title>CirclePacking JS</title>
+	<!-- IPHONE WEB APP META/LINK TAGS -->
+	<meta name="apple-mobile-web-app-capable" content="yes"/>
+	<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+	<meta name="viewport" content="user-scalable=no, width=device-width, minimum-scale=1.0, maximum-scale=1.0"/>
+	<link rel="apple-touch-icon" href="./images/apple-touch-icon.png"/>
+
+	<style>
+		#touchArea {
+			overflow: hidden;
+			border: 1px solid #eee;
+			font: 11px Helvetica, Arial;
+			width: 800px;
+			height: 600px;
+		}
+
+		.packedCircle {
+			background-image: url("./images/circle.png");
+			background-size: 100%;
+			width: 150px;
+			height: 150px;
+			overflow: auto;
+			border: 1px solid #eee;
+			font: 11px Helvetica, Arial;
+		}
+	</style>
+	<script data-main="js/main.js" src="js/require-jquery-1.4.3.js"></script>
+</head>
+<body>
+
+<script>
+	function onCirclePackingInitComplete()
+	{
+		this.bounds = {left:0, top: 0, bottom:$(window).height(), right: $(window).width()};
+
+		var mouseIsDown = false;
+		var draggedCircle = undefined;
+
+		$(document).mousedown(function(event)
+		{
+			mouseIsDown = true;
+		});
+
+		$(document).mouseup(function(event)
+		{
+			mouseIsDown = false;
+			draggedCircle = null;
+
+			// set to null
+			circleManager.setDraggedCircle(draggedCircle);
+		});
+
+		$(document).mousemove(function(event)
+		{
+			if(!draggedCircle && mouseIsDown) {
+				draggedCircle = circleManager.grabCircleAt(event.clientX,  event.clientY);
+			}
+			if(draggedCircle) {
+				draggedCircle.position.x = event.clientX;
+				draggedCircle.position.y = event.clientY;// + draggedCircle.radius;
+			}
+
+
+			event.preventDefault(); // Block iOS scrollview
+		});
+
+		// Convert iphone touchevent to mouseevent
+		function touchHandler(event)
+		{
+			var touches = event.changedTouches,
+					first = touches[0],
+					type = "";
+
+			switch (event.type)
+			{
+				case "touchstart": type = "mousedown"; break;
+				case "touchmove": type = "mousemove"; break;
+				case "touchend": type = "mouseup"; break;
+				default: return;
+			}
+
+			var fakeMouseEvent = document.createEvent("MouseEvent");
+			fakeMouseEvent.initMouseEvent(type, true, true, window, 1,
+					first.screenX, first.screenY,
+					first.clientX, first.clientY, false,
+					false, false, false, 0/*left*/, null);
+
+			first.target.dispatchEvent(fakeMouseEvent);
+			event.preventDefault(); // Block iOS scrollview
+		}
+
+		document.addEventListener("touchstart", touchHandler, true);
+		document.addEventListener("touchmove", touchHandler, true);
+		document.addEventListener("touchend", touchHandler, true);
+		document.addEventListener("touchcancel", touchHandler, true);
+	}
+//
+	// This will be called by main.js for us - im leaving it here to write this comment!
+//	$(document).ready(onDocumentReady);
+</script>
+<div id="touchArea"></div>
+</body>
+</html>
