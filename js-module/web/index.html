@@ -13,8 +13,10 @@
 			overflow: hidden;
 			border: 1px solid #eee;
 			font: 11px Helvetica, Arial;
-			width: 800px;
-			height: 600px;
+			width: 100%;
+			height: 100%;
+			/*width: 1200px;*/
+			/*height: 800px;*/
 		}
 
 		.packedCircle {
@@ -22,8 +24,7 @@
 			background-size: 100%;
 			width: 150px;
 			height: 150px;
-			overflow: auto;
-			border: 1px solid #eee;
+			/*border: 1px solid #eee;*/
 			font: 11px Helvetica, Arial;
 		}
 	</style>
@@ -34,14 +35,13 @@
 <script>
 	function onCirclePackingInitComplete()
 	{
-		this.bounds = {left:0, top: 0, bottom:$(window).height(), right: $(window).width()};
-
 		var mouseIsDown = false;
 		var draggedCircle = undefined;
 
 		$(document).mousedown(function(event)
 		{
 			mouseIsDown = true;
+			draggedCircle = circleManager.grabCircleAt(event.clientX,  event.clientY);
 		});
 
 		$(document).mouseup(function(event)
@@ -55,9 +55,6 @@
 
 		$(document).mousemove(function(event)
 		{
-			if(!draggedCircle && mouseIsDown) {
-				draggedCircle = circleManager.grabCircleAt(event.clientX,  event.clientY);
-			}
 			if(draggedCircle) {
 				draggedCircle.position.x = event.clientX;
 				draggedCircle.position.y = event.clientY;// + draggedCircle.radius;

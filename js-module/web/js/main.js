@@ -17,29 +17,33 @@
 require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js', 'js/PackedCircleManager.js'], function() {
 		require.ready(function()
 		{
+			// Catch console = undefined errors in firefox
+			if(this['console'] == undefined)
+				this.console = {log: function(){}};
+			
 			// Document is ready - do stuff
 			console.log('Document.ready!');
 
 			var container =  $("#touchArea");
-			var amountOfCircles = 20;
+			var amountOfCircles = 35;
 
 			// Use the whole window size
-//			this.bounds= {left: 0, top: 0, bottom: $(window).height(), right: $(window).width()};
+			this.bounds= {left: 0, top: 0, right: $(window).width(), bottom: $(window).height()};
 			// Use the container size
-			this.bounds= {left: 0, top: 0, bottom: container.width(), right: container.height()};
+//			this.bounds= {left: 0, top: 0, right: container.width(), bottom: container.height()};
 			this.circleManager = new PackedCircleManager();
 			this.circleManager.setBounds(this.bounds);
-			
+
 			for(var i = 0; i < amountOfCircles; i++)
 			{
-				var radius = Math.floor(Math.random() * 60) + 30;
+				var radius = Math.floor(Math.random() * 50) + 20;
 				var diameter = radius*2;
 
 				var aCircleDiv = $("<div />");
 				aCircleDiv.addClass('packedCircle');
+				aCircleDiv.css('background-image', ''+"url(./images/circle-"+Math.floor(Math.random() * 8)+".png)");
 				aCircleDiv.css('width', diameter).css('height', diameter);
-				aCircleDiv.css('opacity', '0.5');
-				//	aCircleDiv.css('background-position', radius + "px" + " " + radius + "px");
+//				aCircleDiv.css('opacity', '0.5');
 
 				var backgroundPostionString = diameter + "px" + " " + diameter + "px";
 				aCircleDiv.css('background-position', 'center');
@@ -78,7 +82,7 @@ require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js'
 					}
 				}
 				
-			}, 1000/250);
+			}, 1000/150);
 
 			// Call the fake onDocumentComplete inside index.html
 			if(onCirclePackingInitComplete)

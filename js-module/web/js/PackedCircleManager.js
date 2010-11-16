@@ -40,7 +40,9 @@ var init = (function()
 	PackedCircleManager.prototype.setBounds = function (aBoundaryObject)
 	{
 		this.bounds = aBoundaryObject;
+		console.log(aBoundaryObject);
 		this.center = new Vector(aBoundaryObject.right/2, aBoundaryObject.bottom/2);
+		console.log( aBoundaryObject.bottom);
 	};
 
 	/**
