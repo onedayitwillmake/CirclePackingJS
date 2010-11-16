@@ -1,10 +1,19 @@
 /**
- * Created by IntelliJ IDEA.
- * User: mariogonzalez
- * Date: Nov 15, 2010
- * Time: 5:49:21 PM
- * To change this template use File | Settings | File Templates.
- */
+	  ####  #####  ##### ####    ###  #   # ###### ###### ##     ##  #####  #     #      ########    ##    #  #  #####
+	 #   # #   #  ###   #   #  #####  ###    ##     ##   ##  #  ##    #    #     #     #   ##   #  #####  ###   ###
+	 ###  #   #  ##### ####   #   #   #   ######   ##   #########  #####  ##### ##### #   ##   #  #   #  #   # #####
+ Ð
+ File:
+ 	PackedCircleManager.js
+ Created By:
+ 	Mario Gonzalez
+ Project	:
+ 	None
+ Abstract:
+ 	Manages a set of packed circles.
+ Basic Usage:
+	http://onedayitwillmake.com/CirclePackJS/
+*/
 var init = (function()
 {
 	/*
@@ -68,10 +77,10 @@ var init = (function()
 	{
 		var v = new Vector(0, 0);
 
-		var dragCircle = this.draggedCircle; // ignore for now 
+		var dragCircle = this.draggedCircle; // ignore for now
 		var circleList = this.allCircles;
 		circleList.sort(this.sortOnDistanceToCenter);
-		
+
 		var len = circleList.length;
 
 
@@ -92,7 +101,7 @@ var init = (function()
 				c.position.y -= v.y;
 			}
 		}
-		
+
 		// Collide circles
 		for(var n = 0; n < this.numberOfCollisionPasses; n++)
 		{
@@ -133,7 +142,7 @@ var init = (function()
 						if (ci != dragCircle)
 						{
 							if(cj == dragCircle) v.mul(2);  // Double inverse force to make up for the fact that the other object is fixed
-							
+
 							ci.position.x -= v.x;
 							ci.position.y -= v.y;
 						}
@@ -185,7 +194,7 @@ var init = (function()
 		// These are set every time a better match i found
 		var closestCircle = undefined;
 		var closestDistance = Number.MAX_VALUE; // i could really just use 999 but i look cool
-		
+
 		// Loop thru and find the closest match
 		for(var i = 0; i < len; i++)
 		{

@@ -1,12 +1,19 @@
-/*
-	Circle Packing Algorithm Example
-	 --
-
+/**
 	  ####  #####  ##### ####    ###  #   # ###### ###### ##     ##  #####  #     #      ########    ##    #  #  #####
 	 #   # #   #  ###   #   #  #####  ###    ##     ##   ##  #  ##    #    #     #     #   ##   #  #####  ###   ###
 	 ###  #   #  ##### ####   #   #   #   ######   ##   #########  #####  ##### ##### #   ##   #  #   #  #   # #####
-	 --
- */
+ -
+ File:
+ 	main.js
+ Created By:
+ 	Mario Gonzalez
+ Project	:
+ 	None
+ Abstract:
+ 	A CirclePack.js example
+ Basic Usage:
+	http://onedayitwillmake.com/CirclePackJS/
+*/
 require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js', 'js/PackedCircleManager.js'], function() {
 		require.ready(function()
 		{
@@ -71,7 +78,7 @@ require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js'
 					}
 				}
 				
-			}, 1000/500);
+			}, 1000/250);
 
 			// Call the fake onDocumentComplete inside index.html
 			if(onCirclePackingInitComplete)

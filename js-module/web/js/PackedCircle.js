@@ -1,17 +1,27 @@
 /**
- * Created by IntelliJ IDEA.
- * User: mariogonzalez
- * Date: Nov 15, 2010
- * Time: 5:49:21 PM
- * To change this template use File | Settings | File Templates.
- */
+	  ####  #####  ##### ####    ###  #   # ###### ###### ##     ##  #####  #     #      ########    ##    #  #  #####
+	 #   # #   #  ###   #   #  #####  ###    ##     ##   ##  #  ##    #    #     #     #   ##   #  #####  ###   ###
+	 ###  #   #  ##### ####   #   #   #   ######   ##   #########  #####  ##### ##### #   ##   #  #   #  #   # #####
+ -
+ File:
+ 	PackedCircle.js
+ Created By:
+ 	Mario Gonzalez
+ Project	:
+ 	None
+ Abstract:
+ 		 A single packed circle.
+	 Contains a reference to it's div, and information pertaining to it state.
+ Basic Usage:
+	http://onedayitwillmake.com/CirclePackJS/
+*/
 var init = (function()
 {
 
 	PackedCircle = function(div, radius)
 	{
 		// Data
-		this.div = div;
+		this.div = div;                      
 
 		// Where we would like to be
 		this.targetPosition = new Vector(0,0);
