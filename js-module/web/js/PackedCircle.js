@@ -52,8 +52,6 @@ var init = (function()
 		// Set current
 		this.positionWithOffset.x = (this.position.x - this.radius);
 		this.positionWithOffset.y = (this.position.y - this.radius);
-
-
 		return this.positionWithOffset;
 	};
 

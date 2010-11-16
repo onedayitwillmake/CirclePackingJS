@@ -25,7 +25,7 @@ require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js'
 			console.log('Document.ready!');
 
 			var container =  $("#touchArea");
-			var amountOfCircles = 35;
+			var amountOfCircles = 25;
 
 			// Use the whole window size
 			this.bounds= {left: 0, top: 0, right: $(window).width(), bottom: $(window).height()};
@@ -81,8 +81,8 @@ require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js'
 						$(aCircle.div).offset({left: xpos, top: ypos});
 					}
 				}
-				
-			}, 1000/150);
+
+			}, 1000/35);
 
 			// Call the fake onDocumentComplete inside index.html
 			if(onCirclePackingInitComplete)

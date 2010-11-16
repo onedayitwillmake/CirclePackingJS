@@ -41,7 +41,7 @@
 		$(document).mousedown(function(event)
 		{
 			mouseIsDown = true;
-			draggedCircle = circleManager.grabCircleAt(event.clientX,  event.clientY);
+			
 		});
 
 		$(document).mouseup(function(event)
@@ -55,7 +55,12 @@
 
 		$(document).mousemove(function(event)
 		{
+			if(!draggedCircle && mouseIsDown) {
+				draggedCircle = circleManager.grabCircleAt(event.clientX,  event.clientY);	
+			}
+
 			if(draggedCircle) {
+
 				draggedCircle.position.x = event.clientX;
 				draggedCircle.position.y = event.clientY;// + draggedCircle.radius;
 			}

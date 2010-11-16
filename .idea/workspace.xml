@@ -80,7 +80,7 @@
       <file leaf-file-name="index.html" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/js-module/web/index.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="49" column="0" selection-start="1225" selection-end="1225" vertical-scroll-proportion="-21.0">
+            <state line="43" column="12" selection-start="1077" selection-end="1077" vertical-scroll-proportion="-27.363636">
               <folding />
             </state>
           </provider>
@@ -89,7 +89,7 @@
       <file leaf-file-name="main.js" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/js-module/web/js/main.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="27" column="35" selection-start="932" selection-end="932" vertical-scroll-proportion="0.072">
+            <state line="46" column="145" selection-start="1692" selection-end="1692" vertical-scroll-proportion="0.168">
               <folding />
             </state>
           </provider>
@@ -99,26 +99,6 @@
         <entry file="file://$PROJECT_DIR$/js-module/web/js/PackedCircleManager.js">
           <provider selected="true" editor-type-id="text-editor">
             <state line="15" column="28" selection-start="535" selection-end="558" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="require-jquery-1.4.3.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/js-module/web/js/require-jquery-1.4.3.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="23" column="150" selection-start="948" selection-end="948" vertical-scroll-proportion="0.0">
-              <folding>
-                <marker date="1289890421000" expanded="true" signature="0:1038" placeholder="/*...*/" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="PackedCircle.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/js-module/web/js/PackedCircle.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="45" column="54" selection-start="1205" selection-end="1232" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -177,10 +157,10 @@
         <option value="$PROJECT_DIR$/js-module/web/js/lib/Class.js" />
         <option value="$PROJECT_DIR$/js-module/web/js/lib/SortedLookupTable.js" />
         <option value="$PROJECT_DIR$/js-module/web/js/lib/Vector.js" />
-        <option value="$PROJECT_DIR$/js-module/web/js/PackedCircle.js" />
         <option value="$PROJECT_DIR$/js-module/web/js/require-jquery-1.4.3.js" />
         <option value="$PROJECT_DIR$/js-module/web/js/PackedCircleManager.js" />
         <option value="$PROJECT_DIR$/js-module/web/index.html" />
+        <option value="$PROJECT_DIR$/js-module/web/js/PackedCircle.js" />
         <option value="$PROJECT_DIR$/js-module/web/js/main.js" />
       </list>
     </option>
@@ -601,18 +581,23 @@
         <state line="0" column="0" selection-start="0" selection-end="899" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/js-module/web/js/require-jquery-1.4.3.js">
+    <entry file="file://$PROJECT_DIR$/js-module/web/index.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="23" column="150" selection-start="948" selection-end="948" vertical-scroll-proportion="0.0">
-          <folding>
-            <marker date="1289890421000" expanded="true" signature="0:1038" placeholder="/*...*/" />
-          </folding>
+        <state line="43" column="12" selection-start="1077" selection-end="1077" vertical-scroll-proportion="-27.363636">
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/js-module/web/js/PackedCircle.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="45" column="54" selection-start="1205" selection-end="1232" vertical-scroll-proportion="0.0">
+        <state line="23" column="8" selection-start="677" selection-end="677" vertical-scroll-proportion="0.368">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/js-module/web/js/require-jquery-1.4.3.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="23" column="150" selection-start="948" selection-end="948" vertical-scroll-proportion="0.37441862">
           <folding />
         </state>
       </provider>
@@ -624,16 +609,9 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/js-module/web/index.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="49" column="0" selection-start="1225" selection-end="1225" vertical-scroll-proportion="-21.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/js-module/web/js/main.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="27" column="35" selection-start="932" selection-end="932" vertical-scroll-proportion="0.072">
+        <state line="46" column="145" selection-start="1692" selection-end="1692" vertical-scroll-proportion="0.168">
           <folding />
         </state>
       </provider>
