@@ -17,49 +17,54 @@
 require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js', 'js/PackedCircleManager.js'], function() {
 		require.ready(function()
 		{
-			// Catch console = undefined errors in firefox
-			if(this['console'] == undefined)
-				this.console = {log: function(){}};
-			
-			// Document is ready - do stuff
-			console.log('Document.ready!');
+			// Catch 'console = undefined' errors in firefox
+			if(this['console'] == undefined) this.console = {log: function(args){}};
 
-			var container =  $("#touchArea");
-			var amountOfCircles = 25;
+			var container = document.getElementById("touchArea");//// $("#touchArea");
+			var amountOfCircles = 45;
 
+			/**
+			 * Create the circles and the PackingCircleManager
+			 */
 			// Use the whole window size
 			this.bounds= {left: 0, top: 0, right: $(window).width(), bottom: $(window).height()};
-			// Use the container size
-//			this.bounds= {left: 0, top: 0, right: container.width(), bottom: container.height()};
+			// Or Use the container size
+//			this.bounds= {left: 0, top: 0, right: container.style.width, bottom:  600 };
+
+			// Initialize the PackedCircleManager
 			this.circleManager = new PackedCircleManager();
 			this.circleManager.setBounds(this.bounds);
 
+			// Create N circles
 			for(var i = 0; i < amountOfCircles; i++)
 			{
 				var radius = Math.floor(Math.random() * 50) + 20;
 				var diameter = radius*2;
 
-				var aCircleDiv = $("<div />");
-				aCircleDiv.addClass('packedCircle');
-				aCircleDiv.css('background-image', ''+"url(./images/circle-"+Math.floor(Math.random() * 8)+".png)");
-				aCircleDiv.css('width', diameter).css('height', diameter);
-//				aCircleDiv.css('opacity', '0.5');
+				var aCircleDiv = document.createElement('div');
+          		aCircleDiv.className = 'packedCircle';
+				aCircleDiv.id = 'circ_'+i;
+				aCircleDiv.style.width = diameter+"px";
+				aCircleDiv.style.height = diameter+"px";
 
-				var backgroundPostionString = diameter + "px" + " " + diameter + "px";
-				aCircleDiv.css('background-position', 'center');
-				aCircleDiv.css('-moz-background-size', backgroundPostionString);
+				$(aCircleDiv).css('background-image', "url(./images/circle-"+Math.floor(Math.random() * 7)+".png)");
+				$(aCircleDiv).css('background-position', 'center');
+				// [Mozilla] : Scale the background width
+				$(aCircleDiv).css('-moz-background-size', (radius*2) + "px" + " " + (radius*2) + "px");
+
+				// Create the packed circle, and add it to our lists
 				var aPackedCircle = new PackedCircle(aCircleDiv, radius);
-
 				this.circleManager.addCircle(aPackedCircle);
-				container.append(aCircleDiv);
+				container.appendChild(aCircleDiv);
 			}
-
-
-			this.circleManager.randomizeCirclePositions();
-
-			this.circleManager.packCircles();
-			setInterval(function(){
-				this.circleManager.packCircles();
+			
+			/**
+			 * Updates the positions of the circles divs and runs the collision & target chasing
+			 */
+			function updateCircles()
+			{
+				this.circleManager.pushAllCirclesTowardTarget(this.circleManager.desiredTarget);
+				this.circleManager.handleCollisions();
 
 				// Position circles based on new position
 
@@ -68,21 +73,49 @@ require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js'
 				for(var i = 0; i < len; i++)
 				{
 					var aCircle = circleArray[i];
-					var previousOffsetPosition = aCircle.previousPositionWithOffset;
-					var offsetPosition	= aCircle.getPositionWithRadiusOffset();
-
 
 					// Get the position and truncate the float
-					var xpos = offsetPosition.x >> 0;
-					var ypos = offsetPosition.y >> 0;
-					var delta = previousOffsetPosition.distanceSquared(offsetPosition);
+					var xpos = aCircle.position.x - aCircle.radius;
+					var ypos = aCircle.position.y - aCircle.radius;
 
-					if(delta > 0.1) {
-						$(aCircle.div).offset({left: xpos, top: ypos});
+					var delta = aCircle.previousPosition.distanceSquared(aCircle.position);
+
+					// Anything else we won't bother asking the browser to re-render
+					if(delta > 0.1)
+					{
+						var circleDiv = document.getElementById("circ_"+i);
+
+						// Matrix translate the position of the object in webkit & firefox
+						circleDiv.style.webkitTransform ="translate3d("+xpos+"px,"+ypos+"px, 0px)";
+						circleDiv.style.MozTransform ="translate("+xpos+"px,"+ypos+"px)";
+
+						// [CrossBrowser] : Use jQuery to move the object - uncomment this if all else fails. Very slow.
+						//$(aCircle.div).offset({left: xpos, top: ypos});
+
+						// [Mozilla] : Recenter background
+						if(aCircle.radius > aCircle.originalRadius)
+						{
+							var backgroundPostionString = (aCircle.radius*2) + "px" + " " + (aCircle.radius*2) + "px";
+							$(circleDiv.div).css('-moz-background-size', backgroundPostionString);
+						}
 					}
-				}
 
-			}, 1000/35);
+					// Store the old position for next time
+					aCircle.previousPosition = aCircle.position.cp();
+				}
+			}
+
+			/**
+			 * We're all set to start.
+			 * Let's randomize the circle positions, and call handleCollisions one time manually to push the circles away from one another.
+			 *
+			 * Finally lets call the index.html 'onCirclePackingInitComplete'
+			 */
+			this.circleManager.randomizeCirclePositions();
+			this.circleManager.handleCollisions();
+
+			setInterval(function(){ updateCircles();}, 1000/30);  // 30 is the framerate
+
 
 			// Call the fake onDocumentComplete inside index.html
 			if(onCirclePackingInitComplete)

@@ -25,15 +25,16 @@ var init = (function()
 
 		// Where we would like to be
 		this.targetPosition = new Vector(0,0);
-		// Where we are
+		// Where we really are
 		this.position = new Vector(0,0);
-		this.previousPosition = new Vector();
+		this.previousPosition = new Vector(0,0);
 
-		// For the div stuff
+		// For the div stuff  - to avoid superflous movement calls
 	  	this.positionWithOffset = new Vector(0,0);
 		this.previousPositionWithOffset = new Vector(0,0);
 
-		
+		// Stored because transform3D is relative
+		this.originalDivPosition = undefined;  // set by someone who created us
 		this.setRadius(radius);
 	};
 

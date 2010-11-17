@@ -9,23 +9,28 @@
 	<link rel="apple-touch-icon" href="./images/apple-touch-icon.png"/>
 
 	<style>
-		#touchArea {
+		body{ background-color:#dddddd; };
+		.touchArea {
 			overflow: hidden;
 			border: 1px solid #eee;
 			font: 11px Helvetica, Arial;
 			width: 100%;
-			height: 100%;
+			height: 500px;
 			/*width: 1200px;*/
 			/*height: 800px;*/
 		}
 
 		.packedCircle {
-			background-image: url("./images/circle.png");
+			-webkit-transition: transform3d 0s linear;
+			-webkit-background-size: 100%;
+			background-image: url("./images/smallCircle.png");
 			background-size: 100%;
-			width: 150px;
-			height: 150px;
+			width: 75px;
+			height: 75px;
+			position: absolute;
+			left: 0;
+			top: 0;
 			/*border: 1px solid #eee;*/
-			font: 11px Helvetica, Arial;
 		}
 	</style>
 	<script data-main="js/main.js" src="js/require-jquery-1.4.3.js"></script>
@@ -35,41 +40,59 @@
 <script>
 	function onCirclePackingInitComplete()
 	{
+		// NOTE: Where you see, [Browser Name], it means im doing something just for that browser and making a note of it
 		var mouseIsDown = false;
 		var draggedCircle = undefined;
 
 		$(document).mousedown(function(event)
 		{
 			mouseIsDown = true;
-			
+			draggedCircle = circleManager.grabCircleAt(event.clientX,  event.clientY);
+			if(draggedCircle == null) return; // No circle was found
+
+			// Scale up the new circle
+			var newScale = draggedCircle.radius*2;
+			$(draggedCircle.div).animate({width: newScale, height: newScale}, {duration: 250});
 		});
 
 		$(document).mouseup(function(event)
 		{
 			mouseIsDown = false;
-			draggedCircle = null;
+
+			// Reset the currently dragged circle if we had one
+			if(draggedCircle)
+			{
+				var newSize = draggedCircle.originalRadius*2;
+				$(draggedCircle.div).animate({width: newSize+"px", height: newSize+"px"}, {duration: 250});
+
+				// [Mozilla] : Recenter background
+				if(draggedCircle.radius > draggedCircle.originalRadius)
+				{
+					var backgroundPostionString = (draggedCircle.originalRadius*2) + "px" + " " + (draggedCircle.originalRadius*2) + "px";
+					$(draggedCircle.div).css('-moz-background-size', backgroundPostionString);
+				}
+			}
 
 			// set to null
-			circleManager.setDraggedCircle(draggedCircle);
+			circleManager.setDraggedCircle(null);
+			circleManager.setTarget(new Vector( $(window).width()/2, $(window).height()/2) );
+			draggedCircle = null;
 		});
 
 		$(document).mousemove(function(event)
 		{
-			if(!draggedCircle && mouseIsDown) {
-				draggedCircle = circleManager.grabCircleAt(event.clientX,  event.clientY);	
-			}
-
-			if(draggedCircle) {
-
+			// We're dragging a circle!
+			if(draggedCircle)
+			{
+				// Position under mouse
 				draggedCircle.position.x = event.clientX;
-				draggedCircle.position.y = event.clientY;// + draggedCircle.radius;
+				draggedCircle.position.y = event.clientY;
+				circleManager.setTarget(draggedCircle.position.cp());
 			}
-
-
 			event.preventDefault(); // Block iOS scrollview
 		});
 
-		// Convert iphone touchevent to mouseevent
+		// [WebkitMobile] Convert iphone touchevent to mouseevent
 		function touchHandler(event)
 		{
 			var touches = event.changedTouches,

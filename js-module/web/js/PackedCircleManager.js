@@ -22,7 +22,7 @@ var init = (function()
 	PackedCircleManager = function()
 	{
 		this.allCircles = [];
-		this.center = new Vector(0,0);
+		this.desiredTarget = new Vector(0,0);
 		this.bounds = {left:0, top:0, right:0, bottom:0};
 
 		// Number of passes for the centering and collision algorithms - it's (O)logN^2 so use increase at your own risk!
@@ -40,9 +40,7 @@ var init = (function()
 	PackedCircleManager.prototype.setBounds = function (aBoundaryObject)
 	{
 		this.bounds = aBoundaryObject;
-		console.log(aBoundaryObject);
-		this.center = new Vector(aBoundaryObject.right/2, aBoundaryObject.bottom/2);
-		console.log( aBoundaryObject.bottom);
+		this.desiredTarget = new Vector(aBoundaryObject.right/2, aBoundaryObject.bottom/2);
 	};
 
 	/**
@@ -52,7 +50,7 @@ var init = (function()
 	PackedCircleManager.prototype.addCircle = function(aCircle)
 	{
 		this.allCircles.push(aCircle);
-		aCircle.targetPosition = this.center.cp();
+		aCircle.targetPosition = this.desiredTarget.cp();
 		//this.allCircles.setObjectForKey(aCircle, this.allCircles.count());
 	};
 
@@ -67,42 +65,56 @@ var init = (function()
 			var randomPosition = new Vector(0,0);
 			randomPosition.x = this.randRange(this.bounds.left, this.bounds.right);
 			randomPosition.y = this.randRange(this.bounds.top, this.bounds.bottom);
-			ci.setPosition(randomPosition);
+
+			ci.setPosition(randomPosition);			
 		}
 	};
 
 	/**
-	 * Packs the circles towards the center of the bounds.
-	 * Each circle will have it's own 'targetPosition' later on
+	 * A thing
+	 * @param aTarget	YEAH!
 	 */
-	PackedCircleManager.prototype.packCircles = function()
+	PackedCircleManager.prototype.pushAllCirclesTowardTarget = function(aTarget)
 	{
 		var v = new Vector(0, 0);
 
-		var dragCircle = this.draggedCircle; // ignore for now
+		var dragCircle = this.draggedCircle;
 		var circleList = this.allCircles;
-		circleList.sort(this.sortOnDistanceToCenter);
+//		circleList.sort(this.sortOnDistanceToCenter);
 
 		var len = circleList.length;
 
-
-		// push toward center
-		for(n = 0; n < this.numberOfCenteringPasses; n++)
+		// push toward target position
+		for(var n = 0; n < this.numberOfCenteringPasses; n++)
 		{
-			var damping = 0.02;
+			var damping = 0.03;
 			for(i = 0; i < len; i++)
 			{
 				var c = circleList[i];
 
 				if(c == dragCircle) continue;
 
-				v.x = c.position.x - this.center.x;
-				v.y = c.position.y - this.center.y;
+				v.x = c.position.x - aTarget.x;
+				v.y = c.position.y - aTarget.y;
 				v.mul(damping);
 				c.position.x -= v.x;
 				c.position.y -= v.y;
 			}
 		}
+	};
+
+
+	/**
+	 * Packs the circles towards the center of the bounds.
+	 * Each circle will have it's own 'targetPosition' later on
+	 */
+	PackedCircleManager.prototype.handleCollisions = function()
+	{
+		var v = new Vector(0, 0);
+
+		var dragCircle = this.draggedCircle; // ignore for now
+		var circleList = this.allCircles;
+		var len = circleList.length;
 
 		// Collide circles
 		for(var n = 0; n < this.numberOfCollisionPasses; n++)
@@ -110,9 +122,7 @@ var init = (function()
 			for(var i = 0; i < len; i++)
 			{
 				var ci = circleList[i];
-				ci.previousPosition.x = ci.position.x;
-				ci.previousPosition.y = ci.position.y;
-
+				
 				for (var j = i + 1; j< len; j++)
 				{
 					var cj = circleList[j];
@@ -120,11 +130,12 @@ var init = (function()
 
 					var dx = cj.position.x - ci.position.x;
 					var dy = cj.position.y - ci.position.y;
-					var r = ci.radius + cj.radius;
+					var r = (ci.radius + cj.radius) * 1.08; // The distance between the two circles radii, but we're also gonna pad it a tiny bit 
 
+//					console.log(ci.position.distanceSquared(new Vector(10, 10)));
 					var d = ci.position.distanceSquared(cj.position);
 
-					if (d < (r * r) - 0.01 )
+					if (d < (r * r) - 0.02 )
 					{
 						v.x = dx;
 						v.y = dy;
@@ -135,7 +146,7 @@ var init = (function()
 
 						if(cj != dragCircle)
 						{
-							if(ci == dragCircle) v.mul(2); // Double inverse force to make up for the fact that the other object is fixed
+							if(ci == dragCircle) v.mul(2.2); // Double inverse force to make up for the fact that the other object is fixed
 
 							cj.position.x += v.x;
 							cj.position.y += v.y;
@@ -143,7 +154,7 @@ var init = (function()
 
 						if (ci != dragCircle)
 						{
-							if(cj == dragCircle) v.mul(2);  // Double inverse force to make up for the fact that the other object is fixed
+							if(cj == dragCircle) v.mul(2.2);  // Double inverse force to make up for the fact that the other object is fixed
 
 							ci.position.x -= v.x;
 							ci.position.y -= v.y;
@@ -152,12 +163,42 @@ var init = (function()
 				}
 			}
 		}
+	};
 
+
+	PackedCircleManager.prototype.handleBoundaryForCircle = function(aCircle, boundsRule)
+	{
+		var xpos = aCircle.position.x;
+		var ypos = aCircle.position.y;
+
+		// Toggle these on and off,
+		// Wrap and bounce, are opposite behaviors so pick one or the other for each axis, or bad things will happen.
+		var wrapX = true;
+		var wrapY = true;
+		var bounceX = false;
+		var bounceY = false;
+
+		// TODO: Promote to member variable
+		var boundsRule = wrapX | wrapY | bounceX | bounceY;    // Convert to bitmask
+
+		// Wrap X
+		if(wrapX && xpos > this.bounds.right) {
+			aCircle.position.y = this.bounds.left + aCircle.radius;
+		} else if(wrapX && xpos < this.bounds.left) {
+			aCircle.position.y = this.bounds.right - aCircle.radius;
+		}
+
+		// Wrap Y
+		if(wrapY && ypos > this.bounds.bottom) {
+			aCircle.position.y = this.bounds.top - aCircle.radius;
+		} else if(wrapY && ypos < this.bounds.top) {
+			aCircle.position.y = this.bounds.bottom + aCircle.radius;
+		}
 	};
 
 	/**
 	 * Returns the comaprison result for two circles based on their distance from their target location
-	 * @param circleA
+	 * @param circleA	First Circle	
 	 * @param circleB
 	 */
 	PackedCircleManager.prototype.sortOnDistanceToCenter = function(circleA, circleB)
@@ -179,9 +220,23 @@ var init = (function()
 	 */
 	PackedCircleManager.prototype.setDraggedCircle = function(aCircle)
 	{
+		// Setting to null, and we had a circle before. Restore the radius of the circle as it was previously
+		if(this.draggedCircle && this.draggedCircle != aCircle) {
+			this.draggedCircle.radius = this.draggedCircle.originalRadius;
+		}
 		this.draggedCircle = aCircle;
 	};
 
+
+	/**
+	 * Sets the target position where the circles want to be
+	 * @param aPosition
+	 */
+	PackedCircleManager.prototype.setTarget = function(aPosition)
+	{
+		this.desiredTarget = aPosition;
+	};
+	
 	/**
 	 * Given an x,y position finds circle underneath and sets it to the currently grabbed circle
 	 * @param xpos
@@ -203,7 +258,6 @@ var init = (function()
 			var aCircle = circleList[i];
 			var distanceSquared = aCircle.position.distanceSquared(grabVector);
 
-//			console.log(distanceSquared < aCircle.radiusSquared);
 			if(distanceSquared < closestDistance && distanceSquared < aCircle.radiusSquared)
 			{
 				closestDistance = distanceSquared;
@@ -212,8 +266,9 @@ var init = (function()
 		}
 
 		if(closestCircle == undefined) return;
-		this.draggedCircle = closestCircle;
+		this.setDraggedCircle(closestCircle);
 
+		this.draggedCircle.radius = this.draggedCircle.originalRadius*2;
 		return closestCircle;
 	};
 
