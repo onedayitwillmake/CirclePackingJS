@@ -87,7 +87,6 @@ var init = (function()
 		// push toward target position
 		for(var n = 0; n < this.numberOfCenteringPasses; n++)
 		{
-			var damping = 0.03;
 			for(i = 0; i < len; i++)
 			{
 				var c = circleList[i];
@@ -96,7 +95,8 @@ var init = (function()
 
 				v.x = c.position.x - aTarget.x;
 				v.y = c.position.y - aTarget.y;
-				v.mul(damping);
+				v.mul( 0.03 );
+				
 				c.position.x -= v.x;
 				c.position.y -= v.y;
 			}

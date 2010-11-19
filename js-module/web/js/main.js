@@ -14,15 +14,17 @@
  Basic Usage:
 	http://onedayitwillmake.com/CirclePackJS/
 */
-require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js', 'js/PackedCircleManager.js'], function() {
+require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js', 'js/PackedCircleManager.js', 'js/lib/Stats.js'], function() {
 		require.ready(function()
 		{
 			// Catch 'console = undefined' errors in firefox
-			if(this['console'] == undefined) this.console = {log: function(args){}};
+			//if(this['console'] == undefined) this.console = {log: function(args){}};
+			var console = window['console'];
+			var $ = this['$'];
 
 			var container = document.getElementById("touchArea");//// $("#touchArea");
 			var amountOfCircles = 45;
-
+			
 			/**
 			 * Create the circles and the PackingCircleManager
 			 */
@@ -81,7 +83,7 @@ require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js'
 					var delta = aCircle.previousPosition.distanceSquared(aCircle.position);
 
 					// Anything else we won't bother asking the browser to re-render
-					if(delta > 0.1)
+					if(delta > -0.01)
 					{
 						var circleDiv = document.getElementById("circ_"+i);
 

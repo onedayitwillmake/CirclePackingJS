@@ -25,6 +25,7 @@ var init = (function()
 
 		// Where we would like to be
 		this.targetPosition = new Vector(0,0);
+
 		// Where we really are
 		this.position = new Vector(0,0);
 		this.previousPosition = new Vector(0,0);
@@ -33,6 +34,9 @@ var init = (function()
 	  	this.positionWithOffset = new Vector(0,0);
 		this.previousPositionWithOffset = new Vector(0,0);
 
+		//
+		this.damping = 0.03;// Math.random() * 0.025 + 0.025; // 0.03;
+		
 		// Stored because transform3D is relative
 		this.originalDivPosition = undefined;  // set by someone who created us
 		this.setRadius(radius);

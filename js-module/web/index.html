@@ -44,6 +44,9 @@
 		var mouseIsDown = false;
 		var draggedCircle = undefined;
 
+		// [Intelli-J IDEA] Silence IDE warnings
+		var $ = this['$'];
+		var console = window['console'];
 		$(document).mousedown(function(event)
 		{
 			mouseIsDown = true;
@@ -121,6 +124,22 @@
 		document.addEventListener("touchmove", touchHandler, true);
 		document.addEventListener("touchend", touchHandler, true);
 		document.addEventListener("touchcancel", touchHandler, true);
+
+		/**
+		 * Stats
+		 */
+		var stats = new Stats();
+
+//		// Align top-left
+//		stats.domElement.style.position = 'absolute';
+//		stats.domElement.style.left = '0px';
+//		stats.domElement.style.top = '0px';
+//		console.log( $(stats.domElement).appendTo( $('body') ) );
+//		setInterval( function () {
+//			stats.update();
+// 			<div id="stats"></div>
+
+//		}, 1000 / 60 );
 	}
 //
 	// This will be called by main.js for us - im leaving it here to write this comment!
