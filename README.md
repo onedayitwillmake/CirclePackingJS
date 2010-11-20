@@ -6,7 +6,7 @@ CirclePackJS - N00bs Pwned. Circles Packed.
 See it action! [CirclePackJS](http://onedayitwillmake.com/CirclePackJS)
 
 #### How To Use
-Take a look at the example here - you can copy paste that whole file into something with minimal work
+#Take a look at the example here - you can copy paste that whole file into something with minimal work
 It's easy! [Source for demo](https://github.com/onedayitwillmake/CirclePackingJS/blob/master/js-module/web/js/main.js)
 
 ### Credits
