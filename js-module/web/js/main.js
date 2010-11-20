@@ -22,16 +22,15 @@ require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js'
 			var console = window['console'];
 			var $ = this['$'];
 
-			var container = document.getElementById("touchArea");//// $("#touchArea");
-			var amountOfCircles = 45;
-			
 			/**
-			 * Create the circles and the PackingCircleManager
+			 * Create N Circles, and add them to a div you already created (in thise case, #touchArea)
 			 */
-			// Use the whole window size
-			this.bounds= {left: 0, top: 0, right: $(window).width(), bottom: $(window).height()};
-			// Or Use the container size
-//			this.bounds= {left: 0, top: 0, right: container.style.width, bottom:  600 };
+			var container = document.getElementById("touchArea");
+			var amountOfCircles = 45;
+
+			// Define the bounding box where the circles will live
+			//(Note: im not updating bounds for you on resize, just update the .bounds property inside PackedCircleManager)
+			this.bounds= {left: 0, top: 0, right: $(window).width(), bottom: $(window).height()}; // Use the whole window size for my case
 
 			// Initialize the PackedCircleManager
 			this.circleManager = new PackedCircleManager();
@@ -51,6 +50,7 @@ require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js'
 
 				$(aCircleDiv).css('background-image', "url(./images/circle-"+Math.floor(Math.random() * 7)+".png)");
 				$(aCircleDiv).css('background-position', 'center');
+
 				// [Mozilla] : Scale the background width
 				$(aCircleDiv).css('-moz-background-size', (radius*2) + "px" + " " + (radius*2) + "px");
 
@@ -65,27 +65,26 @@ require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js'
 			 */
 			function updateCircles()
 			{
-				this.circleManager.pushAllCirclesTowardTarget(this.circleManager.desiredTarget);
-				this.circleManager.handleCollisions();
+				this.circleManager.pushAllCirclesTowardTarget(this.circleManager.desiredTarget); // Push all the circles to the target - in my case the center of the bounds
+				this.circleManager.handleCollisions();    // Make the circles collide and adjust positions to move away from each other
 
 				// Position circles based on new position
-
 				var circleArray = this.circleManager.allCircles;
 				var len = circleArray.length;
-				
+
 				for(var i = 0; i < len; i++)
 				{
 					var aCircle = circleArray[i];
-					this.circleManager.handleBoundaryForCircle(aCircle, 0);
+					this.circleManager.handleBoundaryForCircle(aCircle); // Wrap the circles packman style in my case. Look in the function to see different options
 
-					// Get the position and truncate the float
+					// Get the position
 					var xpos = aCircle.position.x - aCircle.radius;
 					var ypos = aCircle.position.y - aCircle.radius;
 
 					var delta = aCircle.previousPosition.distanceSquared(aCircle.position);
 
 					// Anything else we won't bother asking the browser to re-render
-					if(delta > -0.01)
+					if(delta > -0.01) // bug - for now we always re-render
 					{
 						var circleDiv = document.getElementById("circ_"+i);
 
