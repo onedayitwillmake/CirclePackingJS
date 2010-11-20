@@ -87,6 +87,7 @@ var init = (function()
 		// push toward target position
 		for(var n = 0; n < this.numberOfCenteringPasses; n++)
 		{
+			var damping = 0.03;
 			for(i = 0; i < len; i++)
 			{
 				var c = circleList[i];
@@ -95,7 +96,7 @@ var init = (function()
 
 				v.x = c.position.x - aTarget.x;
 				v.y = c.position.y - aTarget.y;
-				v.mul( 0.03 );
+				v.mul(damping);
 				
 				c.position.x -= v.x;
 				c.position.y -= v.y;
@@ -168,31 +169,53 @@ var init = (function()
 
 	PackedCircleManager.prototype.handleBoundaryForCircle = function(aCircle, boundsRule)
 	{
+		if(aCircle == this.draggedCircle) return; // Ignore if being dragged
+		
 		var xpos = aCircle.position.x;
 		var ypos = aCircle.position.y;
 
+		var radius = aCircle.radius;
+		var diameter = radius*2;
+
 		// Toggle these on and off,
 		// Wrap and bounce, are opposite behaviors so pick one or the other for each axis, or bad things will happen.
-		var wrapX = true;
-		var wrapY = true;
-		var bounceX = false;
-		var bounceY = false;
+		var wrapXMask = 0x01;
+		var wrapYMask = 0x02;
+		var constrainXMask = 0x04;
+		var constrainYMask = 0x08;
 
 		// TODO: Promote to member variable
-		var boundsRule = wrapX | wrapY | bounceX | bounceY;    // Convert to bitmask
+		// Convert to bitmask - Uncomment the one you want, or concact your own :)
+//		boundsRule = wrapY; // Wrap only Y axis
+//		boundsRule = wrapX; // Wrap only X axis
+//		boundsRule = wrapXMask | wrapYMask; // Wrap both X and Y axis
+		boundsRule = wrapYMask | constrainXMask;  // Wrap Y axis, but constrain horizontally 
 
-		// Wrap X
-		if(wrapX && xpos > this.bounds.right) {
-			aCircle.position.y = this.bounds.left + aCircle.radius;
-		} else if(wrapX && xpos < this.bounds.left) {
-			aCircle.position.y = this.bounds.right - aCircle.radius;
+//		Wrap X
+		if(boundsRule & wrapXMask && xpos-diameter > this.bounds.right) {
+			aCircle.position.x = this.bounds.left + radius;
+		} else if(boundsRule & wrapXMask && xpos+diameter < this.bounds.left) {
+			aCircle.position.x = this.bounds.right - radius;
+		}
+//		Wrap Y
+		if(boundsRule & wrapYMask && ypos-diameter > this.bounds.bottom) {
+			aCircle.position.y = this.bounds.top - radius;
+		} else if(boundsRule & wrapYMask && ypos+diameter < this.bounds.top) {
+			aCircle.position.y = this.bounds.bottom + radius;
 		}
 
-		// Wrap Y
-		if(wrapY && ypos > this.bounds.bottom) {
-			aCircle.position.y = this.bounds.top - aCircle.radius;
-		} else if(wrapY && ypos < this.bounds.top) {
-			aCircle.position.y = this.bounds.bottom + aCircle.radius;
+//		Constrain X
+		if(boundsRule & constrainXMask && xpos+radius >= this.bounds.right) {
+			aCircle.position.x = aCircle.position.x = this.bounds.right-radius;
+		} else if(boundsRule & constrainXMask && xpos-radius < this.bounds.left) {
+			aCircle.position.x = this.bounds.left + radius;
+		}
+
+//		  Constrain Y
+		if(boundsRule & constrainYMask && ypos+radius > this.bounds.bottom) {
+			aCircle.position.y = this.bounds.bottom - radius;
+		} else if(boundsRule & constrainYMask && ypos-radius < this.bounds.top) {
+			aCircle.position.y = this.bounds.top + radius;
 		}
 	};
 

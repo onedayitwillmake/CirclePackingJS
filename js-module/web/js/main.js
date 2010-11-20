@@ -72,9 +72,11 @@ require(['js/lib/Vector.js', 'js/lib/SortedLookupTable.js', 'js/PackedCircle.js'
 
 				var circleArray = this.circleManager.allCircles;
 				var len = circleArray.length;
+				
 				for(var i = 0; i < len; i++)
 				{
 					var aCircle = circleArray[i];
+					this.circleManager.handleBoundaryForCircle(aCircle, 0);
 
 					// Get the position and truncate the float
 					var xpos = aCircle.position.x - aCircle.radius;

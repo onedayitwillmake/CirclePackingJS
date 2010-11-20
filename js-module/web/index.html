@@ -127,24 +127,22 @@
 
 		/**
 		 * Stats
+		 * Create stats module, and attach to top left
 		 */
 		var stats = new Stats();
-
-//		// Align top-left
-//		stats.domElement.style.position = 'absolute';
-//		stats.domElement.style.left = '0px';
-//		stats.domElement.style.top = '0px';
-//		console.log( $(stats.domElement).appendTo( $('body') ) );
-//		setInterval( function () {
-//			stats.update();
-// 			<div id="stats"></div>
-
-//		}, 1000 / 60 );
+		stats.domElement.style.position = 'absolute';
+		stats.domElement.style.left = '0px';
+		stats.domElement.style.top = '0px';
+		console.log( $(stats.domElement).appendTo( $('body') ) );
+		setInterval( function () {
+			stats.update();
+		}, 1000 / 30 );
 	}
-//
 	// This will be called by main.js for us - im leaving it here to write this comment!
 //	$(document).ready(onDocumentReady);
+
 </script>
 <div id="touchArea"></div>
+<a href="https://github.com/onedayitwillmake/CirclePackingJS"><img style="position: absolute; top: 0; right: 0; border: 0;" src="images/fork.png" alt="Fork me on GitHub" /></a>
 </body>
 </html>
