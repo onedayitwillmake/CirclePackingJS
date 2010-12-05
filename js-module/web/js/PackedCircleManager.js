@@ -28,7 +28,7 @@ var init = (function()
 		// Number of passes for the centering and collision algorithms - it's (O)logN^2 so use increase at your own risk!
 		// Play with these numbers - see what works best for your project
 		this.numberOfCenteringPasses = 1;
-		this.numberOfCollisionPasses = 2;
+		this.numberOfCollisionPasses = 3;
 	};
 
 
@@ -40,7 +40,7 @@ var init = (function()
 	PackedCircleManager.prototype.setBounds = function (aBoundaryObject)
 	{
 		this.bounds = aBoundaryObject;
-		this.desiredTarget = new Vector(aBoundaryObject.right/2, aBoundaryObject.bottom/2);
+//		this.desiredTarget = new Vector(aBoundaryObject.right/2, aBoundaryObject.bottom/2);
 	};
 
 	/**
@@ -84,10 +84,12 @@ var init = (function()
 
 		var len = circleList.length;
 
+
+//		console.log(this.numberOfCenteringPasses)
 		// push toward target position
 		for(var n = 0; n < this.numberOfCenteringPasses; n++)
 		{
-			var damping = 0.03;
+			var damping = 0.025;
 			for(i = 0; i < len; i++)
 			{
 				var c = circleList[i];
@@ -188,8 +190,8 @@ var init = (function()
 		// Convert to bitmask - Uncomment the one you want, or concact your own :)
 //		boundsRule = wrapY; // Wrap only Y axis
 //		boundsRule = wrapX; // Wrap only X axis
-//		boundsRule = wrapXMask | wrapYMask; // Wrap both X and Y axis
-		boundsRule = wrapYMask | constrainXMask;  // Wrap Y axis, but constrain horizontally 
+		boundsRule = wrapXMask | wrapYMask; // Wrap both X and Y axis
+//		boundsRule = wrapYMask | constrainXMask;  // Wrap Y axis, but constrain horizontally
 
 //		Wrap X
 		if(boundsRule & wrapXMask && xpos-diameter > this.bounds.right) {
@@ -257,6 +259,7 @@ var init = (function()
 	 */
 	PackedCircleManager.prototype.setTarget = function(aPosition)
 	{
+
 		this.desiredTarget = aPosition;
 	};
 	
@@ -291,7 +294,7 @@ var init = (function()
 		if(closestCircle == undefined) return;
 		this.setDraggedCircle(closestCircle);
 
-		this.draggedCircle.radius = this.draggedCircle.originalRadius*2;
+		this.draggedCircle.radius = this.draggedCircle.originalRadius*2.5;
 		return closestCircle;
 	};
 

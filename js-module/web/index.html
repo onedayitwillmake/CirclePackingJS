@@ -20,6 +20,10 @@
 			/*height: 800px;*/
 		}
 
+		.canvasArea {
+			overflow: hidden;
+		}
+
 		.packedCircle {
 			-webkit-transition: transform3d 0s linear;
 			-webkit-background-size: 100%;
@@ -40,13 +44,16 @@
 <script>
 	function onCirclePackingInitComplete()
 	{
+
 		// NOTE: Where you see, [Browser Name], it means im doing something just for that browser and making a note of it
 		var mouseIsDown = false;
 		var draggedCircle = undefined;
 
 		// [Intelli-J IDEA] Silence IDE warnings
-		var $ = this['$'];
+		var $ = window['$'];
 		var console = window['console'];
+		var radiusMultiplier = 100;
+
 		$(document).mousedown(function(event)
 		{
 			mouseIsDown = true;
@@ -54,7 +61,7 @@
 			if(draggedCircle == null) return; // No circle was found
 
 			// Scale up the new circle
-			var newScale = draggedCircle.radius*2;
+			var newScale = draggedCircle.radius*radiusMultiplier;
 			$(draggedCircle.div).animate({width: newScale, height: newScale}, {duration: 250});
 		});
 
@@ -65,20 +72,20 @@
 			// Reset the currently dragged circle if we had one
 			if(draggedCircle)
 			{
-				var newSize = draggedCircle.originalRadius*2;
+				var newSize = draggedCircle.radius*radiusMultiplier;
 				$(draggedCircle.div).animate({width: newSize+"px", height: newSize+"px"}, {duration: 250});
 
 				// [Mozilla] : Recenter background
 				if(draggedCircle.radius > draggedCircle.originalRadius)
 				{
-					var backgroundPostionString = (draggedCircle.originalRadius*2) + "px" + " " + (draggedCircle.originalRadius*2) + "px";
-					$(draggedCircle.div).css('-moz-background-size', backgroundPostionString);
+//					var backgroundPostionString = (draggedCircle.originalRadius*2) + "px" + " " + (draggedCircle.originalRadius*2) + "px";
+//					$(draggedCircle.div).css('-moz-background-size', backgroundPostionString);
 				}
 			}
 
 			// set to null
 			circleManager.setDraggedCircle(null);
-			circleManager.setTarget(new Vector( $(window).width()/2, $(window).height()/2) );
+			circleManager.setTarget(new Vector( $(window).width()/2, $(window).height()) );
 			draggedCircle = null;
 		});
 
@@ -124,6 +131,20 @@
 		document.addEventListener("touchmove", touchHandler, true);
 		document.addEventListener("touchend", touchHandler, true);
 		document.addEventListener("touchcancel", touchHandler, true);
+		// Resize canvas
+		window.addEventListener('resize', resizeCanvas, false);
+
+		var canvas = document.getElementById('canvasArea');
+		function resizeCanvas(e) {
+
+			if(window.innerWidth < 10 || window.innerHeight < 10) return; // random error, can happen on load
+			canvas.width = window.innerWidth-25;
+			canvas.height = window.innerHeight-25;
+			circleManager.setTarget(new Vector( $(window).width()/2, $(window).height()+80) );
+			
+//			console.log($(canvasArea).width)
+		}
+
 
 		/**
 		 * Stats
@@ -133,16 +154,22 @@
 		stats.domElement.style.position = 'absolute';
 		stats.domElement.style.left = '0px';
 		stats.domElement.style.top = '0px';
-		console.log( $(stats.domElement).appendTo( $('body') ) );
+		$(stats.domElement).appendTo( $('body') );
 		setInterval( function () {
 			stats.update();
 		}, 1000 / 30 );
+
+		// Force resize canvas for first time
+		resizeCanvas();
 	}
 	// This will be called by main.js for us - im leaving it here to write this comment!
 //	$(document).ready(onDocumentReady);
 
 </script>
+<canvas id="canvasArea" width="10" height='10'>
+	You don't have canvas
+</canvas>
 <div id="touchArea"></div>
-<a href="https://github.com/onedayitwillmake/CirclePackingJS"><img style="position: absolute; top: 0; right: 0; border: 0;" src="images/fork.png" alt="Fork me on GitHub" /></a>
+<a href="https://github.com/onedayitwillmake/CirclePackingJS"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://onedayitwillmake.com/CirclePackJS/images/fork.png" alt="Fork me on GitHub" /></a>
 </body>
 </html>
