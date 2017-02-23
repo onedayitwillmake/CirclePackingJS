@@ -24,7 +24,29 @@ export default class PackedCircleManager {
 	 * @param aBoundaryObject
 	 */
 	setBounds ( aBoundaryObject ) {
-		this.bounds = aBoundaryObject;
+		if ( typeof aBoundaryObject.left === 'number' ) {
+			this.bounds.left = aBoundaryObject.left;
+		}
+
+		if ( typeof aBoundaryObject.right === 'number' ) {
+			this.bounds.right = aBoundaryObject.right;
+		}
+
+		if ( typeof aBoundaryObject.top === 'number' ) {
+			this.bounds.top = aBoundaryObject.top;
+		}
+
+		if ( typeof aBoundaryObject.bottom === 'number' ) {
+			this.bounds.bottom = aBoundaryObject.bottom;
+		}
+
+		if ( typeof aBoundaryObject.width === 'number' ) {
+			this.bounds.right = this.bounds.left + aBoundaryObject.width;
+		}
+
+		if ( typeof aBoundaryObject.height === 'number' ) {
+			this.bounds.bottom = this.bounds.top + aBoundaryObject.height;
+		}
 	}
 
 	/**
@@ -68,6 +90,7 @@ export default class PackedCircleManager {
 		// store information about the previous position
 		for ( let i = 0; i < circleCount; ++i ) {
 			const circle = circleList[i];
+
 			circle.previousPosition = circle.position.cp();
 		}
 
@@ -78,6 +101,13 @@ export default class PackedCircleManager {
 		
 		// Make the circles collide and adjust positions to move away from each other
 		this.handleCollisions();
+
+		// store information about the previous position
+		for ( let i = 0; i < circleCount; ++i ) {
+			const circle = circleList[i];
+
+			this.handleBoundaryForCircle( circle );
+		}
 	}
 
 	pushAllCirclesTowardTarget ( aTarget ) {
@@ -173,6 +203,36 @@ export default class PackedCircleManager {
 		}
 	}
 
+	handleBoundaryForCircle ( aCircle ) {		
+		let x = aCircle.position.x;
+		let y = aCircle.position.y;
+
+		const radius = aCircle.radius;
+		let overEdge = false;
+
+		if ( x + radius >= this.bounds.right ) {
+			x = this.bounds.right - radius;
+			overEdge = true;
+		} else if ( x - radius < this.bounds.left ) {
+			x = this.bounds.left + radius;
+			overEdge = true;
+		}
+
+		if ( y + radius > this.bounds.bottom ) {
+			y = this.bounds.bottom - radius;
+			overEdge = true;
+		} else if ( y - radius < this.bounds.top ) {
+			y = this.bounds.top + radius;
+			overEdge = true;
+		}
+
+		// end dragging if user dragged over edge
+		if ( overEdge && aCircle === this.draggedCircle ) {
+			this.draggedCircle = null;
+		}
+	}
+
+
 	/**
 	 * Force a certain circle to be the 'draggedCircle'.
 	 * Can be used to undrag a circle by calling setDraggedCircle(null)
@@ -187,7 +247,6 @@ export default class PackedCircleManager {
 
 		this.draggedCircle = aCircle;
 	}
-
 
 	dragStart ( id ) {
 		const draggedCircle = this.allCircles.filter( c => { return c.id === id; } )[0];
