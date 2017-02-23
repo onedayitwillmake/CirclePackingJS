@@ -24,18 +24,20 @@
 		<div class="container"></div>
 		<button id="add-circle">add circle</button>
 		<button id="delete-circle">delete circle</button>
+		<button id="random-size">random size</button>
 		<script src="../dist/circlepacker.js"></script>
 		<script>
 var containerEl = document.querySelector( '.container' );
 var addButtonEl = document.querySelector( '#add-circle' );
 var deleteButtonEl = document.querySelector( '#delete-circle' );
+var randomButtonEl = document.querySelector( '#random-size' );
 
 // references to all circle elements
 var circleEls = { };
 
 // dimenstions of container
 var rect = containerEl.getBoundingClientRect();
-var bounds = { width: rect.width, height: rect.height };
+var bounds = { width: rect.width, height: rect.height };
 var target = { x: bounds.width / 2, y: bounds.height / 2 };
 
 var isDragging = false;
@@ -60,6 +62,7 @@ var packer = new CirclePacker( {
 
 addButtonEl.addEventListener( 'click', addRandomCircle );
 deleteButtonEl.addEventListener( 'click', removeRandomCircle );
+randomButtonEl.addEventListener( 'click', setRandomBounds );
 
 // start calculations
 packer.update();
@@ -75,6 +78,18 @@ function removeRandomCircle () {
 
 	removeCircle( idToDelete );
 	packer.update();
+}
+
+function setRandomBounds () {
+	bounds = {
+		width: random( 200, 500, true ),
+		height: random( 200, 500, true )
+	};
+
+	containerEl.style.width = bounds.width + 'px';
+	containerEl.style.height = bounds.height + 'px';
+
+	packer.setBounds( bounds );
 }
 
 // create circle dom object, return circle data

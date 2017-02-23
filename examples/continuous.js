@@ -6,13 +6,14 @@ const DRAG_THRESOLD = 10;
 const containerEl = document.querySelector( '.container' );
 const addButtonEl = document.querySelector( '#add-circle' );
 const deleteButtonEl = document.querySelector( '#delete-circle' );
+const randomButtonEl = document.querySelector( '#random-size' );
 
 // references to all circle elements
 const circleEls = { };
 
 // dimenstions of container
 const rect = containerEl.getBoundingClientRect();
-const bounds = { width: rect.width, height: rect.height };
+let bounds = { width: rect.width, height: rect.height };
 const target = { x: bounds.width / 2, y: bounds.height / 2 };
 
 var isDragging = false;
@@ -25,10 +26,11 @@ let circles = [
 	createCircle()
 ];
 
-const packer = new CirclePacker( { bounds, target, circles, onMove: render, collisionPasses: 3, centeringPasses: 2 } );
+const packer = new CirclePacker( { bounds, target, circles, onMove: render, collisionPasses: 3, centeringPasses: 2 } );
 
 addButtonEl.addEventListener( 'click', addRandomCircle );
 deleteButtonEl.addEventListener( 'click', removeRandomCircle );
+randomButtonEl.addEventListener( 'click', setRandomBounds );
 
 function addRandomCircle () {
 	packer.addCircle( createCircle() );
@@ -87,6 +89,18 @@ function removeRandomCircle () {
 	removeCircle( idToDelete );
 }
 
+function setRandomBounds () {
+	bounds = {
+		width: random( 200, 500, true ),
+		height: random( 200, 500, true )
+	};
+
+	containerEl.style.width = bounds.width + 'px';
+	containerEl.style.height = bounds.height + 'px';
+
+	packer.setBounds( bounds );
+}
+
 function removeCircle ( id ) {
 	packer.removeCircle( id );
 	
@@ -142,7 +156,7 @@ function circlePressed ( circleEl, circle, event ) {
 
 		// start dragging if mouse moved DRAG_THRESOLD px
 		if ( ! isDragging &&
-			( Math.abs( delta.x ) > DRAG_THRESOLD || Math.abs( delta.y ) > DRAG_THRESOLD )
+			( Math.abs( delta.x ) > DRAG_THRESOLD || Math.abs( delta.y ) > DRAG_THRESOLD )
 		) {
 			isDragging = true;
 			packer.dragStart( circle.id );

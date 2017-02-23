@@ -4,13 +4,14 @@ import { random } from '../src/util.js';
 const containerEl = document.querySelector( '.container' );
 const addButtonEl = document.querySelector( '#add-circle' );
 const deleteButtonEl = document.querySelector( '#delete-circle' );
+const randomButtonEl = document.querySelector( '#random-size' );
 
 // references to all circle elements
 const circleEls = { };
 
 // dimenstions of container
 const rect = containerEl.getBoundingClientRect();
-const bounds = { width: rect.width, height: rect.height };
+let bounds = { width: rect.width, height: rect.height };
 const target = { x: bounds.width / 2, y: bounds.height / 2 };
 
 var isDragging = false;
@@ -35,6 +36,7 @@ const packer = new CirclePacker( {
 
 addButtonEl.addEventListener( 'click', addRandomCircle );
 deleteButtonEl.addEventListener( 'click', removeRandomCircle );
+randomButtonEl.addEventListener( 'click', setRandomBounds );
 
 packer.update();
 
@@ -49,6 +51,18 @@ function removeRandomCircle () {
 
 	removeCircle( idToDelete );
 	packer.update();
+}
+
+function setRandomBounds () {
+	bounds = {
+		width: random( 200, 500, true ),
+		height: random( 200, 500, true )
+	};
+
+	containerEl.style.width = bounds.width + 'px';
+	containerEl.style.height = bounds.height + 'px';
+
+	packer.setBounds( bounds );
 }
 
 // create circle dom object, return circle data
