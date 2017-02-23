@@ -39,11 +39,11 @@ returns a new circlepacker instance. it accepts the following options:
 	var packerOptions = {
 		// the point that the circles should be attracted to
 		// REQUIRED
-		target: { x: 50, y: 50 },
+		target: { x: 50, y: 50 },
 
 		// the bounds of the area we want to draw the circles in
 		// REQUIRED
-		bounds: { width: 100, height: 100 },
+		bounds: { width: 100, height: 100 },
 	
 		// the initial position and sizes of our circles
 		// it is possible to add more circles later
@@ -190,7 +190,7 @@ drag(circleId, position)
 update position of dragges circle. a _position_ object should have `x` and `y` values. this is usually called in a `mousemove` or a `touchmove` event handler.
 
 ```javascript
-	packer.drag( 'circle2', { x: 30, y: 45 } );
+	packer.drag( 'circle2', { x: 30, y: 45 } );
 ```
 
 back to [reference](#reference)
