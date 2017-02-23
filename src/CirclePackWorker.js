@@ -74,7 +74,7 @@ function setTarget ( target ) {
 	}
 }
 
-function update () {
+function update () {
 	circleManager.updatePositions();
 
 	sendPositions();

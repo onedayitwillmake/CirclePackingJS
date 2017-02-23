@@ -3,7 +3,7 @@ import { sendWorkerMessage, processWorkerMessage, isCircleValid, isBoundsValid }
 // this class keeps track of the drawing loop in continuous drawing mode
 // and passes messages to the worker
 export default class CirclePacker {
-	constructor ( params ) {
+	constructor ( params = { } ) {
 		this.worker = new Worker( 'src/CirclePackWorker.js' );
 		this.worker.addEventListener( 'message', this.receivedWorkerMessage.bind( this ) );
 		
@@ -21,9 +21,9 @@ export default class CirclePacker {
 			this.setCollisionPasses( params.collisionPasses );
 		}
 
-		this.addCircles( params.circles );
-		this.setBounds( params.bounds );
-		this.setTarget( params.target );
+		this.addCircles( params.circles || [ ] );
+		this.setBounds( params.bounds || { width: 100, height: 100 } );
+		this.setTarget( params.target || { x: 50, y: 50 } );
 
 		this.isLooping = false;
 		this.areItemsMoving = true;
@@ -183,10 +183,11 @@ export default class CirclePacker {
 	}
 
 	destroy () {
-		if ( this.worker ) {
-			this.worker.terminate();
-		}
-
+		if ( this.worker ) { this.worker.terminate(); }
 		this.stopLoop();
+		
+		this.onMove = null;
+		this.onMoveStart = null;
+		this.onMoveEnd = null;
 	}
 }
