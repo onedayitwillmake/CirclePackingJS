@@ -9,7 +9,7 @@
     "webworker",
     "browser"
   ],
-  "main": "dist/circkepacker.js",
+  "main": "dist/circlepacker.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run build-es6 && npm run build-es5 && npm run build-min && npm run build-min-es5",
