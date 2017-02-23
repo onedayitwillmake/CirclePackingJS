@@ -204,25 +204,25 @@ export default class PackedCircleManager {
 	}
 
 	handleBoundaryForCircle ( aCircle ) {		
-		let x = aCircle.position.x;
-		let y = aCircle.position.y;
-
+		const x = aCircle.position.x;
+		const y = aCircle.position.y;
 		const radius = aCircle.radius;
+		
 		let overEdge = false;
 
 		if ( x + radius >= this.bounds.right ) {
-			x = this.bounds.right - radius;
+			aCircle.position.x = this.bounds.right - radius;
 			overEdge = true;
 		} else if ( x - radius < this.bounds.left ) {
-			x = this.bounds.left + radius;
+			aCircle.position.x = this.bounds.left + radius;
 			overEdge = true;
 		}
 
 		if ( y + radius > this.bounds.bottom ) {
-			y = this.bounds.bottom - radius;
+			aCircle.position.y = this.bounds.bottom - radius;
 			overEdge = true;
 		} else if ( y - radius < this.bounds.top ) {
-			y = this.bounds.top + radius;
+			aCircle.position.y = this.bounds.top + radius;
 			overEdge = true;
 		}
 
@@ -231,7 +231,6 @@ export default class PackedCircleManager {
 			this.draggedCircle = null;
 		}
 	}
-
 
 	/**
 	 * Force a certain circle to be the 'draggedCircle'.
