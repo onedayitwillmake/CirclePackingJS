@@ -8,6 +8,8 @@ downloads
 * [circlepacker.es6.js](https://raw.githubusercontent.com/snorpey/circlepacker/master/dist/circlepacker.es6.js) 24kb (6kb gzipped)
 * [circlepacker.es6.min.js](https://raw.githubusercontent.com/snorpey/circlepacker/master/dist/circlepacker.es6.min.js) 7kb (2kb gzipped)
 
+`npm install circlepacker`
+
 what is it?
 ---
 ![circlepacker demo](demo.gif)
