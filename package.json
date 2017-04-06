@@ -18,6 +18,7 @@
     "build-min": "node build.js -m",
     "build-min-es5": "node build.js -me"
   },
+  "module": "dist/circlepacker.es6.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/snorpey/circlepacker.git"
