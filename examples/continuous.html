@@ -25,6 +25,11 @@
 		<button id="add-circle">add circle</button>
 		<button id="delete-circle">delete circle</button>
 		<button id="random-size">random size</button>
+		<div>
+			<label for="damping">damping</label>
+			<input id="damping" type="range" min="0" max="0.05" step="0.001" value="0.025" />
+			<span id="damping-value">0.025</span>
+		</div>
 		<script src="../dist/circlepacker.js"></script>
 		<script>
 var DRAG_THRESOLD = 10;
@@ -33,6 +38,8 @@ var containerEl = document.querySelector( '.container' );
 var addButtonEl = document.querySelector( '#add-circle' );
 var deleteButtonEl = document.querySelector( '#delete-circle' );
 var randomButtonEl = document.querySelector( '#random-size' );
+var dampingInputEl = document.querySelector( '#damping' );
+var dampingValueEl = document.querySelector( '#damping-value' );
 
 // references to all circle elements
 var circleEls = { };
@@ -64,6 +71,7 @@ var packer = new CirclePacker( {
 addButtonEl.addEventListener( 'click', addRandomCircle );
 deleteButtonEl.addEventListener( 'click', removeRandomCircle );
 randomButtonEl.addEventListener( 'click', setRandomBounds );
+dampingInputEl.addEventListener( 'input', setDamping );
 
 function addRandomCircle () {
 	packer.addCircle( createCircle() );
@@ -141,6 +149,12 @@ function removeCircle ( id ) {
 		containerEl.removeChild( circleEls[id] );
 		delete circleEls[id];
 	} );
+}
+
+function setDamping () {
+	var damping = parseFloat( dampingInputEl.value );
+	dampingValueEl.textContent = damping.toFixed( 2 );
+	packer.setDamping( damping );
 }
 
 function render ( circles ) {

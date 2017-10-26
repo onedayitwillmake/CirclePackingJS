@@ -28,7 +28,7 @@ reference
 
 [`CirclePacker(options)`](#circlepackeroptions)
 
-[`addCircles(circles)`](#addcirclescircles), [`addCircle(circle)`](#addcirclescircle), [`setBounds(bounds)`](#setboundsbounds), [`setTarget(position)`](#settargetposition), [`setCenteringPasses(number)`](#setcenteringpassesnumber), [`setCollisionPasses(number)`](#setcollisionpassesnumber), [`update()`](#update), [`dragStart(circleId)`](#dragstartcircleid), [`drag(circleId, position)`](#dragcircleid-position), [`dragEnd(circleId)`](#dragendcircleid), [`destroy()`](#destroy)
+[`addCircles(circles)`](#addcirclescircles), [`addCircle(circle)`](#addcirclescircle), [`setBounds(bounds)`](#setboundsbounds), [`setTarget(position)`](#settargetposition), [`setCenteringPasses(number)`](#setcenteringpassesnumber), [`setCollisionPasses(number)`](#setcollisionpassesnumber), [`setDamping(number)`](#setdampingnumber), [`update()`](#update), [`dragStart(circleId)`](#dragstartcircleid), [`drag(circleId, position)`](#dragcircleid-position), [`dragEnd(circleId)`](#dragendcircleid), [`destroy()`](#destroy)
 
 CirclePacker(options)
 ---
@@ -158,6 +158,17 @@ updates number of collision passed. should an integer >= 1. high values can impa
 
 ```javascript
 	packer.setCollisionPasses( 3 );
+```
+
+back to [reference](#reference)
+
+setDamping(number)
+---
+
+set damping. this affects the movement speed of the circles. value should be a float between 0 and 1. the _default_ value is _0.025_
+
+```javascript
+	packer.setDamping( 0.01 );
 ```
 
 back to [reference](#reference)

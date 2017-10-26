@@ -56,6 +56,12 @@ function receivedMessage ( event ) {
 			circleManager.numberOfCollisionPasses = message;
 		}
 	}
+
+	if ( type === 'damping' ) {
+		if ( typeof message === 'number' && message > 0 ) {
+			circleManager.damping = message;
+		}
+	}
 }
 
 function updatePage ( type, message ) {

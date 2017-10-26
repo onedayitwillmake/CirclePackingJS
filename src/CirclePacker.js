@@ -113,6 +113,10 @@ export default class CirclePacker {
 		this.updateWorker( 'collisionpasses', numberOfCollisionPasses );
 	}
 
+	setDamping ( damping ) {
+		this.updateWorker( 'damping', damping );
+	}
+
 	update () {
 		this.updateWorker( 'update' );
 	}

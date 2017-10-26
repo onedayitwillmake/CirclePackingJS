@@ -10,6 +10,7 @@ export default class PackedCircleManager {
 		this.allCircles = [ ];
 		this.desiredTarget = new Vector( 0, 0 );
 		this.bounds = { left: 0, top: 0, right: 0, bottom: 0 };
+		this.damping = 0.025;
 
 		// Number of passes for the centering and collision
 		// algorithms - it's (O)logN^2 so use increase at your own risk!
@@ -117,9 +118,7 @@ export default class PackedCircleManager {
 		var circleList = this.allCircles;
 		var circleCount = circleList.length;
 
-		for ( var n = 0; n < this.numberOfCenteringPasses; n++ ) {
-			var damping = 0.025;
-			
+		for ( var n = 0; n < this.numberOfCenteringPasses; n++ ) {			
 			for ( var i = 0; i < circleCount; i++ ) {
 				var circle = circleList[i];
 
@@ -129,7 +128,7 @@ export default class PackedCircleManager {
 
 				v.x = circle.position.x - aTarget.x;
 				v.y = circle.position.y - aTarget.y;
-				v.mul ( damping );
+				v.mul ( this.damping );
 				
 				circle.position.x -= v.x;
 				circle.position.y -= v.y;
