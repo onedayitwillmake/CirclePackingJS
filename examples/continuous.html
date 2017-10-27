@@ -14,6 +14,8 @@
     -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
 		.circle.is-visible { display: block; cursor: pointer; }
 		.circle:hover { background-color: #000 }
+		.range-container { margin-top: 20px; }
+		#damping-value { display: inline-block; font-family: monospace; text-align: right; margin-left: 10px;}
 	</style>
 	<body>
 		<article class="text">
@@ -25,7 +27,7 @@
 		<button id="add-circle">add circle</button>
 		<button id="delete-circle">delete circle</button>
 		<button id="random-size">random size</button>
-		<div>
+		<div class="range-container">
 			<label for="damping">damping</label>
 			<input id="damping" type="range" min="0" max="0.05" step="0.001" value="0.025" />
 			<span id="damping-value">0.025</span>
@@ -153,7 +155,7 @@ function removeCircle ( id ) {
 
 function setDamping () {
 	var damping = parseFloat( dampingInputEl.value );
-	dampingValueEl.textContent = damping.toFixed( 2 );
+	dampingValueEl.textContent = damping.toFixed( 4 );
 	packer.setDamping( damping );
 }
 
