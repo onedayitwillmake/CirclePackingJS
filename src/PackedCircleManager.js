@@ -8,6 +8,7 @@ import Vector from './Vector.js';
 export default class PackedCircleManager {
 	constructor () {
 		this.allCircles = [ ];
+		this.pinnedCircleIds = [ ];
 		this.desiredTarget = new Vector( 0, 0 );
 		this.bounds = { left: 0, top: 0, right: 0, bottom: 0 };
 		this.damping = 0.025;
@@ -122,7 +123,10 @@ export default class PackedCircleManager {
 			for ( var i = 0; i < circleCount; i++ ) {
 				var circle = circleList[i];
 
-				if ( circle === dragCircle ) {
+				// Kinematic circles can't be pushed around.
+				const isCircleKinematic = circle === dragCircle || this.isCirclePinned( circle.id );
+
+				if ( isCircleKinematic ) {
 					continue;
 				}
 
@@ -154,9 +158,22 @@ export default class PackedCircleManager {
 				
 				for ( var j = i + 1; j < circleCount; j++ ) {
 					var circleB = circleList[j];
+
+					const isCircleAPinned = this.isCirclePinned( circleA.id );
+					const isCircleBPinned = this.isCirclePinned( circleB.id );
+
+					// Kinematic circles can't be pushed around.
+					const isCircleAKinematic = circleA === dragCircle || isCircleAPinned;
+					const isCircleBKinematic = circleB === dragCircle || isCircleBPinned;
 					
-					if ( circleA === circleB ) {
-						continue; // It's us!
+					if (
+						// It's us!
+						circleA === circleB ||
+
+						// Kinematic circles don't interact with eachother
+						( isCircleAKinematic && isCircleBKinematic )
+					) {
+						continue; 
 					}
 
 					var dx = circleB.position.x - circleA.position.x;
@@ -174,9 +191,9 @@ export default class PackedCircleManager {
 
 						var inverseForce = ( r - Math.sqrt( d ) ) * 0.5;
 						v.mul( inverseForce );
-
-						if ( circleB !== dragCircle ) {
-							if ( circleA === dragCircle ) {
+						
+						if ( ! isCircleBKinematic ) {
+							if ( isCircleAKinematic ) {
 								// Double inverse force to make up 
 								// for the fact that the other object is fixed
 								v.mul( 2.2 );
@@ -186,8 +203,8 @@ export default class PackedCircleManager {
 							circleB.position.y += v.y;
 						}
 
-						if ( circleA !== dragCircle ) {
-							if ( circleB === dragCircle ) {
+						if ( ! isCircleAKinematic ) {
+							if ( isCircleBKinematic ) {
 								// Double inverse force to make up 
 								// for the fact that the other object is fixed
 								v.mul( 2.2 );
@@ -262,6 +279,20 @@ export default class PackedCircleManager {
 			this.draggedCircle.position.x = position.x;
 			this.draggedCircle.position.y = position.y;
 		}
+	}
+
+	isCirclePinned ( id ) {
+		return this.pinnedCircleIds.includes( id );
+	}
+
+	pinCircle ( id ) {
+		if ( ! this.isCirclePinned( id ) ) {
+			this.pinnedCircleIds.push( id );
+		}
+	}
+
+	unpinCircle ( id ) {
+		this.pinnedCircleIds = this.pinnedCircleIds.filter( circleId => circleId !== id );
 	}
 
 	/**

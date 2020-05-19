@@ -14,8 +14,10 @@
     -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
 		.circle.is-visible { display: block; cursor: pointer; }
 		.circle:hover { background-color: #000 }
-		.range-container { margin-top: 20px; }
-		#damping-value { display: inline-block; font-family: monospace; text-align: right; margin-left: 10px;}
+		.circle.is-pinned { background-color: #fff }
+		.range-container { margin-top: 20px; display: flex; align-items: center; }
+		.range-container > * + * { display: inline-block; margin-left: 10px; }
+		#damping-value { display: inline-block; font-family: monospace; text-align: right; }
 	</style>
 	<body>
 		<article class="text">
@@ -27,6 +29,7 @@
 		<button id="add-circle">add circle</button>
 		<button id="delete-circle">delete circle</button>
 		<button id="random-size">random size</button>
+		<button id="pin-random">toggle pin</button>
 		<div class="range-container">
 			<label for="damping">damping</label>
 			<input id="damping" type="range" min="0" max="0.05" step="0.001" value="0.025" />
@@ -40,6 +43,7 @@ var containerEl = document.querySelector( '.container' );
 var addButtonEl = document.querySelector( '#add-circle' );
 var deleteButtonEl = document.querySelector( '#delete-circle' );
 var randomButtonEl = document.querySelector( '#random-size' );
+var pinRandomButtonEl = document.querySelector( '#pin-random' );
 var dampingInputEl = document.querySelector( '#damping' );
 var dampingValueEl = document.querySelector( '#damping-value' );
 
@@ -52,6 +56,7 @@ var bounds = { width: rect.width, height: rect.height };
 var target = { x: bounds.width / 2, y: bounds.height / 2 };
 
 var isDragging = false;
+var pinnedCircleId = null;
 
 var circles = [
 	createCircle(),
@@ -73,6 +78,7 @@ var packer = new CirclePacker( {
 addButtonEl.addEventListener( 'click', addRandomCircle );
 deleteButtonEl.addEventListener( 'click', removeRandomCircle );
 randomButtonEl.addEventListener( 'click', setRandomBounds );
+pinRandomButtonEl.addEventListener( 'click', toggleRandomCirclePin );
 dampingInputEl.addEventListener( 'input', setDamping );
 
 function addRandomCircle () {
@@ -151,6 +157,23 @@ function removeCircle ( id ) {
 		containerEl.removeChild( circleEls[id] );
 		delete circleEls[id];
 	} );
+}
+
+function toggleRandomCirclePin () {
+	if ( pinnedCircleId ) {
+		packer.unpinCircle( pinnedCircleId );
+		circleEls[pinnedCircleId].classList.remove( 'is-pinned' );
+		pinnedCircleId = null;
+	} else {
+		if ( circles.length ) {
+			var randomCircleIndex = Math.floor( Math.random() * circles.length );
+			var randomCircle = circles[randomCircleIndex];
+
+			pinnedCircleId = randomCircle.id;
+			circleEls[pinnedCircleId].classList.add( 'is-pinned' );
+			packer.pinCircle( randomCircle );
+		}
+	}
 }
 
 function setDamping () {

@@ -14,6 +14,10 @@
     -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
 		.circle.is-visible { display: block; cursor: pointer; }
 		.circle:hover { background-color: #000 }
+		.circle.is-pinned { background-color: #fff }
+		.range-container { margin-top: 20px; display: flex; align-items: center; }
+		.range-container > * + * { display: inline-block; margin-left: 10px; }
+		#damping-value { display: inline-block; font-family: monospace; text-align: right; }
 	</style>
 	<body>
 		<article class="text">
@@ -26,33 +30,12 @@
 		<button id="add-circle">add circle</button>
 		<button id="delete-circle">delete circle</button>
 		<button id="random-size">random size</button>
-		<script src="https://unpkg.com/systemjs"></script>
-		<script>
-
-		// this is for for demo purposes only to show it working with es6
-		// don't let me catch you using this setup in production
-		SystemJS.config( {
-			map: {
-				'plugin-traceur': 'https://unpkg.com/systemjs-plugin-traceur',
-				'traceur': 'https://unpkg.com/traceur/bin/traceur.js',
-				'traceur-runtime': 'https://unpkg.com/traceur/bin/traceur-runtime.js'
-			},
-			meta: {
-				'traceur': {
-					format: 'global',
-					exports: 'traceur'
-				},
-				'traceur-runtime': {
-					format: 'global',
-					exports: '$traceurRuntime'
-				}
-			},
-			transpiler: 'plugin-traceur',
-			transpilerRuntime: false,
-			baseURL: '.'
-		} );
-
-		SystemJS.import( 'continuous.js' );
-		</script>
+		<button id="pin-random">toggle pin</button>
+		<div class="range-container">
+			<label for="damping">damping</label>
+			<input id="damping" type="range" min="0" max="0.05" step="0.001" value="0.025" />
+			<span id="damping-value">0.025</span>
+		</div>
+		<script src="continuous.js" type="module"></script>
 	</body>
 </html>
