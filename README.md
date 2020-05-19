@@ -28,7 +28,7 @@ reference
 
 [`CirclePacker(options)`](#circlepackeroptions)
 
-[`addCircles(circles)`](#addcirclescircles), [`addCircle(circle)`](#addcirclescircle), [`setBounds(bounds)`](#setboundsbounds), [`setTarget(position)`](#settargetposition), [`setCenteringPasses(number)`](#setcenteringpassesnumber), [`setCollisionPasses(number)`](#setcollisionpassesnumber), [`setDamping(number)`](#setdampingnumber), [`update()`](#update), [`dragStart(circleId)`](#dragstartcircleid), [`drag(circleId, position)`](#dragcircleid-position), [`dragEnd(circleId)`](#dragendcircleid), [`destroy()`](#destroy)
+[`addCircles(circles)`](#addcirclescircles), [`addCircle(circle)`](#addcirclescircle), [`setBounds(bounds)`](#setboundsbounds), [`setTarget(position)`](#settargetposition), [`setCenteringPasses(number)`](#setcenteringpassesnumber), [`setCollisionPasses(number)`](#setcollisionpassesnumber), [`setDamping(number)`](#setdampingnumber), [`update()`](#update), [`dragStart(circleId)`](#dragstartcircleid), [`drag(circleId, position)`](#dragcircleid-position), [`dragEnd(circleId)`](#dragendcircleid), [`pinCircle(circleId)`](#pincirclecircleid), [`unpinCircle(circleId)`](#unpincirclecircleid), [`destroy()`](#destroy)
 
 CirclePacker(options)
 ---
@@ -209,10 +209,32 @@ back to [reference](#reference)
 dragEnd(circleId)
 ---
 
-indicate that we're done dragging this circle. . this is usually called in an `mouseup` or a `touchend` event handler.
+indicate that we're done dragging this circle. this is usually called in an `mouseup` or a `touchend` event handler.
 
 ```javascript
 	packer.dragEnd( 'circle2' );
+```
+
+back to [reference](#reference)
+
+pinCircle(circleId)
+---
+
+pin circle. this means that the circle is static and will not move. other circles will still be bounce off of it.
+
+```javascript
+	packer.pinCircle( 'circle2' );
+```
+
+back to [reference](#reference)
+
+unpinCircle(circleId)
+---
+
+unpin circle. this means that the circle is no longer static and will start colliding with other circles as normal.
+
+```javascript
+	packer.unpinCircle( 'circle2' );
 ```
 
 back to [reference](#reference)
@@ -247,7 +269,7 @@ Georg Fischer &lt;snorpey@gmail.com&gt;
 
 large parts of the circle packing algirithm are based on the [CirclePackingJS](https://github.com/onedayitwillmake/CirclePackingJS) repo by [@onedayitwillmake](https://github.com/onedayitwillmake) (mit licensed)
 
-missing somehing?
+missing something?
 ===
 
 found a bug? missing a feature? instructions unclear? are you using this library in an interesting project? maybe open an issue or a pull request to let me know. thanks!

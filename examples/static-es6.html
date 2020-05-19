@@ -27,33 +27,7 @@
 		<button id="add-circle">add circle</button>
 		<button id="delete-circle">delete circle</button>
 		<button id="random-size">random size</button>
-		<script src="https://unpkg.com/systemjs"></script>
-		<script>
-
-		// this is for for demo purposes only to show it working with es6
-		// don't let me catch you using this setup in production
-		SystemJS.config( {
-			map: {
-				'plugin-traceur': 'https://unpkg.com/systemjs-plugin-traceur',
-				'traceur': 'https://unpkg.com/traceur/bin/traceur.js',
-				'traceur-runtime': 'https://unpkg.com/traceur/bin/traceur-runtime.js'
-			},
-			meta: {
-				'traceur': {
-					format: 'global',
-					exports: 'traceur'
-				},
-				'traceur-runtime': {
-					format: 'global',
-					exports: '$traceurRuntime'
-				}
-			},
-			transpiler: 'plugin-traceur',
-			transpilerRuntime: false,
-			baseURL: '.'
-		} );
-
-		SystemJS.import( 'static.js' );
+		<script src="static.js" type="module"></script>
 		</script>
 	</body>
 </html>

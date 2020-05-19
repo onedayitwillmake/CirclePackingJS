@@ -93,6 +93,30 @@ export default class CirclePacker {
 		}
 	}
 
+	pinCircle ( circle ) {
+		if ( circle ) {
+			if ( circle.id ) {
+				this.updateWorker( 'pincircle', circle.id );
+			} else {
+				this.updateWorker( 'pincircle', circle );
+			}
+
+			this.startLoop();
+		}
+	}
+
+	unpinCircle ( circle ) {
+		if ( circle ) {
+			if ( circle.id ) {
+				this.updateWorker( 'unpincircle', circle.id );
+			} else {
+				this.updateWorker( 'unpincircle', circle );
+			}
+
+			this.startLoop();
+		}
+	}
+
 	setBounds ( bounds ) {
 		if ( isBoundsValid( bounds ) ) {
 			this.updateWorker( 'bounds', bounds );

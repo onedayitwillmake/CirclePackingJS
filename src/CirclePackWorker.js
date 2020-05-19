@@ -45,6 +45,14 @@ function receivedMessage ( event ) {
 		circleManager.dragEnd( message.id );
 	}
 
+	if ( type === 'pincircle' ) {
+		circleManager.pinCircle( message );
+	}
+
+	if ( type === 'unpincircle' ) {
+		circleManager.unpinCircle( message );
+	}
+
 	if ( type === 'centeringpasses' ) {
 		if ( typeof message === 'number' && message > 0 ) {
 			circleManager.numberOfCenteringPasses = message;
