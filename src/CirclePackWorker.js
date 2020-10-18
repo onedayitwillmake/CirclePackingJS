@@ -45,6 +45,14 @@ function receivedMessage ( event ) {
 		circleManager.dragEnd( message.id );
 	}
 
+	if ( type === 'pincircle' ) {
+		circleManager.pinCircle( message );
+	}
+
+	if ( type === 'unpincircle' ) {
+		circleManager.unpinCircle( message );
+	}
+
 	if ( type === 'centeringpasses' ) {
 		if ( typeof message === 'number' && message > 0 ) {
 			circleManager.numberOfCenteringPasses = message;
@@ -61,6 +69,18 @@ function receivedMessage ( event ) {
 		if ( typeof message === 'number' && message > 0 ) {
 			circleManager.damping = message;
 		}
+	}
+
+	if ( type === 'circleradius' ) {
+		circleManager.setCircleRadius( message.id, message.radius );
+	}
+
+	if ( type === 'circlecenterpull' ) {
+		circleManager.setCircleCenterPull( message.id, message.centerPull );
+	}
+
+	if ( type === 'centerpull' ) {
+		circleManager.setCenterPull( message.centerPull );
 	}
 }
 
@@ -92,7 +112,9 @@ function sendPositions () {
 			position: circle.position,
 			previousPosition: circle.previousPosition,
 			radius: circle.radius,
-			delta: circle.delta
+			delta: circle.delta,
+			isPulledToCenter: circle.isPulledToCenter,
+			isPinned: circle.isPinned
 		};
 
 		return result;

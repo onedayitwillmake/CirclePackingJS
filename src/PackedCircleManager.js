@@ -8,6 +8,7 @@ import Vector from './Vector.js';
 export default class PackedCircleManager {
 	constructor () {
 		this.allCircles = [ ];
+		this.pinnedCircleIds = [ ];
 		this.desiredTarget = new Vector( 0, 0 );
 		this.bounds = { left: 0, top: 0, right: 0, bottom: 0 };
 		this.damping = 0.025;
@@ -17,6 +18,8 @@ export default class PackedCircleManager {
 		// Play with these numbers - see what works best for your project
 		this.numberOfCenteringPasses = 1;
 		this.numberOfCollisionPasses = 3;
+
+		this.isCenterPullActive = true;
 	}
 
 	/**
@@ -56,7 +59,14 @@ export default class PackedCircleManager {
 	 */
 	addCircle ( aCircle ) {
 		if ( ! ( aCircle instanceof PackedCircle ) ) {
-			aCircle = new PackedCircle( aCircle.id, aCircle.radius, aCircle.position.x, aCircle.position.y );
+			aCircle = new PackedCircle( {
+				id: aCircle.id,
+				radius: aCircle.radius,
+				x: aCircle.position.x || 0,
+				y: aCircle.position.y || 0,
+				isPinned: aCircle.isPinned || false,
+				isPulledToCenter: typeof aCircle.isPulledToCenter === 'boolean' ? aCircle.isPulledToCenter : true
+			} );
 		}
 
 		this.allCircles.push( aCircle );
@@ -95,7 +105,7 @@ export default class PackedCircleManager {
 			circle.previousPosition = circle.position.cp();
 		}
 
-		if ( this.desiredTarget ) {
+		if ( this.desiredTarget && this.isCenterPullActive ) {
 			// Push all the circles to the target - in my case the center of the bounds
 			this.pushAllCirclesTowardTarget( this.desiredTarget );
 		}
@@ -121,17 +131,22 @@ export default class PackedCircleManager {
 		for ( var n = 0; n < this.numberOfCenteringPasses; n++ ) {			
 			for ( var i = 0; i < circleCount; i++ ) {
 				var circle = circleList[i];
-
-				if ( circle === dragCircle ) {
-					continue;
-				}
-
-				v.x = circle.position.x - aTarget.x;
-				v.y = circle.position.y - aTarget.y;
-				v.mul ( this.damping );
 				
-				circle.position.x -= v.x;
-				circle.position.y -= v.y;
+				if ( circle.isPulledToCenter ) {
+					// Kinematic circles can't be pushed around.
+					const isCircleKinematic = circle === dragCircle || this.isCirclePinned( circle.id );
+
+					if ( isCircleKinematic ) {
+						continue;
+					}
+
+					v.x = circle.position.x - aTarget.x;
+					v.y = circle.position.y - aTarget.y;
+					v.mul ( this.damping );
+					
+					circle.position.x -= v.x;
+					circle.position.y -= v.y;
+				}
 			}
 		}
 	}
@@ -154,9 +169,22 @@ export default class PackedCircleManager {
 				
 				for ( var j = i + 1; j < circleCount; j++ ) {
 					var circleB = circleList[j];
+
+					const isCircleAPinned = this.isCirclePinned( circleA.id );
+					const isCircleBPinned = this.isCirclePinned( circleB.id );
+
+					// Kinematic circles can't be pushed around.
+					const isCircleAKinematic = circleA === dragCircle || isCircleAPinned;
+					const isCircleBKinematic = circleB === dragCircle || isCircleBPinned;
 					
-					if ( circleA === circleB ) {
-						continue; // It's us!
+					if (
+						// It's us!
+						circleA === circleB ||
+
+						// Kinematic circles don't interact with eachother
+						( isCircleAKinematic && isCircleBKinematic )
+					) {
+						continue; 
 					}
 
 					var dx = circleB.position.x - circleA.position.x;
@@ -174,9 +202,9 @@ export default class PackedCircleManager {
 
 						var inverseForce = ( r - Math.sqrt( d ) ) * 0.5;
 						v.mul( inverseForce );
-
-						if ( circleB !== dragCircle ) {
-							if ( circleA === dragCircle ) {
+						
+						if ( ! isCircleBKinematic ) {
+							if ( isCircleAKinematic ) {
 								// Double inverse force to make up 
 								// for the fact that the other object is fixed
 								v.mul( 2.2 );
@@ -186,8 +214,8 @@ export default class PackedCircleManager {
 							circleB.position.y += v.y;
 						}
 
-						if ( circleA !== dragCircle ) {
-							if ( circleB === dragCircle ) {
+						if ( ! isCircleAKinematic ) {
+							if ( isCircleBKinematic ) {
 								// Double inverse force to make up 
 								// for the fact that the other object is fixed
 								v.mul( 2.2 );
@@ -247,7 +275,7 @@ export default class PackedCircleManager {
 	}
 
 	dragStart ( id ) {
-		const draggedCircle = this.allCircles.filter( c => { return c.id === id; } )[0];
+		const draggedCircle = this.allCircles.filter( circle => circle.id === id )[0];
 		this.setDraggedCircle( draggedCircle );
 	}
 
@@ -262,6 +290,56 @@ export default class PackedCircleManager {
 			this.draggedCircle.position.x = position.x;
 			this.draggedCircle.position.y = position.y;
 		}
+	}
+
+	isCirclePinned ( id ) {
+		const circle = this.circleById( id );
+
+		if ( circle ) {
+			return circle.isPinned;
+		}
+
+		return false;
+	}
+
+	pinCircle ( id ) {
+		const circle = this.circleById( id );
+
+		if ( circle ) {
+			circle.isPinned = true;
+		}
+	}
+
+	unpinCircle ( id ) {
+		const circle = this.circleById( id );
+
+		if ( circle ) {
+			circle.isPinned = false;
+		}
+	}
+
+	setCircleRadius ( id, radius ) {
+		const circle = this.circleById( id );
+
+		if ( circle ) {
+			circle.setRadius( radius );
+		}
+	}
+
+	setCircleCenterPull ( id, centerPull ) {
+		const circle = this.circleById( id );
+
+		if ( circle ) {
+			circle.isPulledToCenter = centerPull;
+		}
+	}
+
+	setCenterPull ( centerPull ) {
+		this.isCenterPullActive = centerPull;
+	}
+
+	circleById ( id ) {
+		return this.allCircles.filter( circle => circle.id === id )[0];
 	}
 
 	/**

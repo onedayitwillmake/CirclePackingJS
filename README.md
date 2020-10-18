@@ -28,7 +28,7 @@ reference
 
 [`CirclePacker(options)`](#circlepackeroptions)
 
-[`addCircles(circles)`](#addcirclescircles), [`addCircle(circle)`](#addcirclescircle), [`setBounds(bounds)`](#setboundsbounds), [`setTarget(position)`](#settargetposition), [`setCenteringPasses(number)`](#setcenteringpassesnumber), [`setCollisionPasses(number)`](#setcollisionpassesnumber), [`setDamping(number)`](#setdampingnumber), [`update()`](#update), [`dragStart(circleId)`](#dragstartcircleid), [`drag(circleId, position)`](#dragcircleid-position), [`dragEnd(circleId)`](#dragendcircleid), [`destroy()`](#destroy)
+[`addCircles(circles)`](#addcirclescircles), [`addCircle(circle)`](#addcirclescircle), [`setBounds(bounds)`](#setboundsbounds), [`setTarget(position)`](#settargetposition), [`setCenteringPasses(number)`](#setcenteringpassesnumber), [`setCollisionPasses(number)`](#setcollisionpassesnumber), [`setDamping(number)`](#setdampingnumber), [`setCenterPull(boolean)`](#setcenterpullboolean), [`update()`](#update), [`dragStart(circleId)`](#dragstartcircleid), [`drag(circleId, position)`](#dragcircleid-position), [`dragEnd(circleId)`](#dragendcircleid), [`pinCircle(circleId)`](#pincirclecircleid), [`unpinCircle(circleId)`](#unpincirclecircleid), [`setCircleRadius(circleId, number)`](#setcircleradiuscircleid-number), [`setCircleCenterPull(circleId, boolean)`](#setcirclecenterpullcircleid-boolean) [`destroy()`](#destroy)
 
 CirclePacker(options)
 ---
@@ -50,9 +50,9 @@ returns a new circlepacker instance. it accepts the following options:
 		// each circle should have a unique id, a position and a radius
 		// REQUIRED
 		circles: [
-			{ id: 'circle1', radius: 34, position: { x: 32, y: 54 } },
-			{ id: 'circle2', radius: 64, position: { x: 24, y: 42 } },
-			{ id: 'circle3', radius: 53, position: { x: 23, y: 21 } }
+			{ id: 'circle1', radius: 34, position: { x: 32, y: 54 }, isPulledToCenter: true, isPinned: false },
+			{ id: 'circle2', radius: 64, position: { x: 24, y: 42 }, isPulledToCenter: true, isPinned: false },
+			{ id: 'circle3', radius: 53, position: { x: 23, y: 21 }, isPulledToCenter: true, isPinned: false }
 		],
 
 		// true: continuous animation loop
@@ -100,8 +100,8 @@ add an array of new circles. each _circle_ should have a unique `id`, a `positio
 
 ```javascript
 	packer.addCircles( [
-		{ id: 'circle4', radius: 21, position: { x: 12, y: 27 } },
-		{ id: 'circle5', radius: 64, position: { x: 14, y: 42 } }
+		{ id: 'circle4', radius: 21, position: { x: 12, y: 27 }, isPulledToCenter: false, isPinned: false },
+		{ id: 'circle5', radius: 64, position: { x: 14, y: 42 }, isPulledToCenter: false, isPinned: false }
 	] );
 ```
 
@@ -173,6 +173,17 @@ set damping. this affects the movement speed of the circles. value should be a f
 
 back to [reference](#reference)
 
+setCenterPull(boolean)
+---
+
+set center pull. if set to `false`, circles collide, but are not pulled to the center. the _default_ value is `true`.
+
+```javascript
+	packer.setCenterPull( false );
+```
+
+back to [reference](#reference)
+
 update()
 ---
 
@@ -209,10 +220,54 @@ back to [reference](#reference)
 dragEnd(circleId)
 ---
 
-indicate that we're done dragging this circle. . this is usually called in an `mouseup` or a `touchend` event handler.
+indicate that we're done dragging this circle. this is usually called in an `mouseup` or a `touchend` event handler.
 
 ```javascript
 	packer.dragEnd( 'circle2' );
+```
+
+back to [reference](#reference)
+
+pinCircle(circleId)
+---
+
+pin circle. this means that the circle is static and will not move. other circles will still be bounce off of it.
+
+```javascript
+	packer.pinCircle( 'circle2' );
+```
+
+back to [reference](#reference)
+
+unpinCircle(circleId)
+---
+
+unpin circle. this means that the circle is no longer static and will start colliding with other circles as normal.
+
+```javascript
+	packer.unpinCircle( 'circle2' );
+```
+
+back to [reference](#reference)
+
+setCircleRadius(circleId, number)
+---
+
+change the radius of a circle.
+
+```javascript
+	packer.setCircleRadius( 'circle2', 20 );
+```
+
+back to [reference](#reference)
+
+setCircleCenterPull(circleId, boolean)
+---
+
+change the `isPulledToCenter` value of a circle. if it is set to `false`, the circle is not pulled to the center. (it still collides with other circles).
+
+```javascript
+	packer.setCircleCenterPull( 'circle2', true );
 ```
 
 back to [reference](#reference)
@@ -247,7 +302,7 @@ Georg Fischer &lt;snorpey@gmail.com&gt;
 
 large parts of the circle packing algirithm are based on the [CirclePackingJS](https://github.com/onedayitwillmake/CirclePackingJS) repo by [@onedayitwillmake](https://github.com/onedayitwillmake) (mit licensed)
 
-missing somehing?
+missing something?
 ===
 
 found a bug? missing a feature? instructions unclear? are you using this library in an interesting project? maybe open an issue or a pull request to let me know. thanks!

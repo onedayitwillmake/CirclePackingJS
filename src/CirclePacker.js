@@ -93,6 +93,60 @@ export default class CirclePacker {
 		}
 	}
 
+	pinCircle ( circle ) {
+		if ( circle ) {
+			if ( circle.id ) {
+				this.updateWorker( 'pincircle', circle.id );
+			} else {
+				this.updateWorker( 'pincircle', circle );
+			}
+
+			this.startLoop();
+		}
+	}
+
+	unpinCircle ( circle ) {
+		if ( circle ) {
+			if ( circle.id ) {
+				this.updateWorker( 'unpincircle', circle.id );
+			} else {
+				this.updateWorker( 'unpincircle', circle );
+			}
+
+			this.startLoop();
+		}
+	}
+
+	setCircleRadius ( circle, radius ) {
+		if ( circle && radius >= 0 ) {
+			if ( circle.id ) {
+				this.updateWorker( 'circleradius', { id: circle.id, radius } );
+			} else {
+				this.updateWorker( 'circleradius', { id: circle, radius } );
+			}
+
+			this.startLoop();
+		}
+	}
+
+	setCircleCenterPull ( circle, centerPull ) {
+		if ( circle ) {
+			if ( circle.id ) {
+				this.updateWorker( 'circlecenterpull', { id: circle.id, centerPull: !! centerPull } );
+			} else {
+				this.updateWorker( 'circlecenterpull', { id: circle, centerPull: !! centerPull } );
+			}
+
+			this.startLoop();
+		}
+	}
+
+	setCenterPull ( centerPull ) {
+		this.updateWorker( 'centerpull', { centerPull: !! centerPull } );
+
+		this.startLoop();
+	}
+
 	setBounds ( bounds ) {
 		if ( isBoundsValid( bounds ) ) {
 			this.updateWorker( 'bounds', bounds );

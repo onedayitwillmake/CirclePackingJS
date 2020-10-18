@@ -1,4 +1,4 @@
-import CirclePacker from '../dist/circlepacker.js';
+import CirclePacker from '../dist/circlepacker.es6.js';
 import { random } from '../src/util.js';
 
 const DRAG_THRESOLD = 10;
@@ -7,6 +7,12 @@ const containerEl = document.querySelector( '.container' );
 const addButtonEl = document.querySelector( '#add-circle' );
 const deleteButtonEl = document.querySelector( '#delete-circle' );
 const randomButtonEl = document.querySelector( '#random-size' );
+const pinRandomButtonEl = document.querySelector( '#pin-random' );
+const randomRadiusEl = document.querySelector( '#radius-random' );
+const centerPullButtonEl = document.querySelector( '#toggle-center-pull' );
+const circleCenterPullButtonEl = document.querySelector( '#toggle-circle-center-pull' );
+const dampingInputEl = document.querySelector( '#damping' );
+const dampingValueEl = document.querySelector( '#damping-value' );
 
 // references to all circle elements
 const circleEls = { };
@@ -15,6 +21,9 @@ const circleEls = { };
 const rect = containerEl.getBoundingClientRect();
 let bounds = { width: rect.width, height: rect.height };
 const target = { x: bounds.width / 2, y: bounds.height / 2 };
+
+let pinnedCircleId = null;
+let centerPull = true;
 
 var isDragging = false;
 
@@ -31,9 +40,21 @@ const packer = new CirclePacker( { bounds, target, circles, onMove: render, coll
 addButtonEl.addEventListener( 'click', addRandomCircle );
 deleteButtonEl.addEventListener( 'click', removeRandomCircle );
 randomButtonEl.addEventListener( 'click', setRandomBounds );
+pinRandomButtonEl.addEventListener( 'click', toggleRandomCirclePin );
+randomRadiusEl.addEventListener( 'click', setRandomRadius );
+centerPullButtonEl.addEventListener( 'click', toggleCenterPull );
+circleCenterPullButtonEl.addEventListener( 'click', toggleRandomCircleCenterPull );
+dampingInputEl.addEventListener( 'input', setDamping );
 
 function addRandomCircle () {
 	packer.addCircle( createCircle() );
+}
+
+function setRandomRadius () {
+	const ids = Object.keys( circleEls );
+	const randomCircleId = ids[random( 0, ids.length, true )];
+
+	packer.setCircleRadius( randomCircleId, random( 10, 80, true ) );
 }
 
 // create circle dom object, return circle data
@@ -110,6 +131,43 @@ function removeCircle ( id ) {
 	} );
 }
 
+function toggleRandomCirclePin () {
+	if ( pinnedCircleId ) {
+		packer.unpinCircle( pinnedCircleId );
+		circleEls[pinnedCircleId].classList.remove( 'is-pinned' );
+		pinnedCircleId = null;
+	} else {
+		if ( circles.length ) {
+			const randomCircleIndex = Math.floor( Math.random() * circles.length );
+			const randomCircle = circles[randomCircleIndex];
+
+			pinnedCircleId = randomCircle.id;
+			circleEls[pinnedCircleId].classList.add( 'is-pinned' );
+			packer.pinCircle( randomCircle );
+		}
+	}
+}
+
+function setDamping () {
+	var damping = parseFloat( dampingInputEl.value );
+	dampingValueEl.textContent = damping.toFixed( 4 );
+	packer.setDamping( damping );
+}
+
+function toggleRandomCircleCenterPull () {
+	const ids = Object.keys( circleEls );
+	const randomCircleId = ids[random( 0, ids.length, true )];
+	const centerPull = Math.random() > 0.5;
+
+	packer.setCircleCenterPull( randomCircleId, centerPull );
+}
+
+function toggleCenterPull () {
+	centerPull = !centerPull;
+
+	packer.setCenterPull( centerPull );
+}
+
 function render ( circles ) {
 	requestAnimationFrame( function () {
 		for ( let id in circles ) {
@@ -119,6 +177,11 @@ function render ( circles ) {
 				const circle = circles[id];
 				const x = circle.position.x - circle.radius;
 				const y = circle.position.y - circle.radius;
+
+				const diameter = circle.radius * 2;
+				circleEl.style.width = diameter + 'px';
+				circleEl.style.height = diameter + 'px';
+				circleEl.style.borderRadius = diameter + 'px';
 
 				// store position for dragging
 				circleEl.setAttribute( 'data-x', x );

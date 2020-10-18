@@ -5,7 +5,10 @@
 import Vector from './Vector.js';
 
 export default class PackedCircle {
-	constructor ( id, radius, x = 0, y = 0 ) {
+	constructor ( { id, radius, x, y, isPulledToCenter, isPinned } ) {
+		x = x || 0;
+		y = y || 0;
+
 		this.id = id;                      
 
 		// Where we would like to be
@@ -17,6 +20,9 @@ export default class PackedCircle {
 		// For the div stuff  - to avoid superflous movement calls
 	  	this.positionWithOffset = new Vector( x, y );
 		this.previousPositionWithOffset = new Vector( x, y );
+
+		this.isPulledToCenter = isPulledToCenter;
+		this.isPinned = isPinned;
 
 		// Stored because transform3D is relative
 		this.setRadius( radius );
