@@ -1,6 +1,6 @@
 {
   "name": "circlepacker",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "circle packing in a webworker",
   "keywords": [
     "circkepacker",
