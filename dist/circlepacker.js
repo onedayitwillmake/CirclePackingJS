@@ -177,7 +177,7 @@ CirclePacker.prototype.setCenterPull = function setCenterPull ( centerPull ) {
 
 	this.startLoop();
 };
-
+	
 CirclePacker.prototype.setBounds = function setBounds ( bounds ) {
 	if ( isBoundsValid( bounds ) ) {
 		this.updateWorker( 'bounds', bounds );

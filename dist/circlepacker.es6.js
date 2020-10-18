@@ -167,7 +167,7 @@ class CirclePacker {
 
 		this.startLoop();
 	}
-
+	
 	setBounds ( bounds ) {
 		if ( isBoundsValid( bounds ) ) {
 			this.updateWorker( 'bounds', bounds );
