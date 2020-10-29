@@ -41,6 +41,8 @@ var CirclePacker = function CirclePacker ( params ) {
 	this.onMove = params.onMove || null;
 	this.onMoveEnd = params.onMoveEnd || null;
 
+	this.lastCirclePositions = [ ];
+
 	if ( params.centeringPasses ) {
 		this.setCenteringPasses( params.centeringPasses );
 	}
@@ -70,6 +72,15 @@ CirclePacker.prototype.receivedWorkerMessage = function receivedWorkerMessage ( 
 	if ( msg.type === 'move' ) {
 		var newPositions = msg.message;						
 		this.areItemsMoving = this.hasItemMoved( newPositions );
+
+		if (
+			! this.areItemsMoving &&
+			this.isLooping &&
+			this.initialized &&
+			this.isContinuousModeActive
+		) {
+			this.stopLoop();
+		}
 	}
 
 	this.updateListeners( msg );
@@ -88,6 +99,7 @@ CirclePacker.prototype.updateListeners = function updateListeners ( ref ) {
 	}
 		
 	if ( type === 'move' && typeof this.onMove === 'function' ) {
+		this.lastCirclePositions = message;
 		this.onMove( message );
 	}
 
@@ -243,7 +255,7 @@ CirclePacker.prototype.startLoop = function startLoop () {
 			this.areItemsMoving = true;
 		}
 			
-		this.updateListeners( 'movestart' );
+		this.updateListeners( { type: 'movestart' } );
 		this.animationFrameId = requestAnimationFrame( this.updateLoop.bind( this ) );
 	}
 };
@@ -251,7 +263,7 @@ CirclePacker.prototype.startLoop = function startLoop () {
 CirclePacker.prototype.stopLoop = function stopLoop () {
 	if ( this.isLooping ) {
 		this.isLooping = false;
-		this.updateListeners( 'moveend' );
+		this.updateListeners( { type: 'moveend', message: this.lastCirclePositions } );
 		cancelAnimationFrame( this.animationFrameId );
 	}
 };
@@ -267,6 +279,7 @@ CirclePacker.prototype.hasItemMoved = function hasItemMoved ( positions ) {
 			result = true;
 		}
 	}
+
 
 	return result;
 };
