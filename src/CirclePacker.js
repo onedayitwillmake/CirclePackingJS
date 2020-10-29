@@ -13,6 +13,8 @@ export default class CirclePacker {
 		this.onMove = params.onMove || null;
 		this.onMoveEnd = params.onMoveEnd || null;
 
+		this.lastCirclePositions = [ ];
+
 		if ( params.centeringPasses ) {
 			this.setCenteringPasses( params.centeringPasses );
 		}
@@ -42,6 +44,15 @@ export default class CirclePacker {
 		if ( msg.type === 'move' ) {
 			const newPositions = msg.message;						
 			this.areItemsMoving = this.hasItemMoved( newPositions );
+
+			if (
+				! this.areItemsMoving &&
+				this.isLooping &&
+				this.initialized &&
+				this.isContinuousModeActive
+			) {
+				this.stopLoop();
+			}
 		}
 
 		this.updateListeners( msg );
@@ -57,6 +68,7 @@ export default class CirclePacker {
 		}
 		
 		if ( type === 'move' && typeof this.onMove === 'function' ) {
+			this.lastCirclePositions = message;
 			this.onMove( message );
 		}
 
@@ -212,7 +224,7 @@ export default class CirclePacker {
 				this.areItemsMoving = true;
 			}
 			
-			this.updateListeners( 'movestart' );
+			this.updateListeners( { type: 'movestart' } );
 			this.animationFrameId = requestAnimationFrame( this.updateLoop.bind( this ) );
 		}
 	}
@@ -220,7 +232,7 @@ export default class CirclePacker {
 	stopLoop () {
 		if ( this.isLooping ) {
 			this.isLooping = false;
-			this.updateListeners( 'moveend' );
+			this.updateListeners( { type: 'moveend', message: this.lastCirclePositions } );
 			cancelAnimationFrame( this.animationFrameId );
 		}
 	}
@@ -236,6 +248,7 @@ export default class CirclePacker {
 				result = true;
 			}
 		}
+
 
 		return result;
 	}
