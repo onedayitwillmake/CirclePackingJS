@@ -242,7 +242,7 @@ export default class CirclePacker {
 		
 		for ( let id in positions ) {
 			if (
-				Math.abs( positions[id].delta.x ) > 0.005 && 
+				Math.abs( positions[id].delta.x ) > 0.005 || 
 				Math.abs( positions[id].delta.y ) > 0.005
 			) {
 				result = true;
