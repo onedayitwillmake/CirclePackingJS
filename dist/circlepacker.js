@@ -273,7 +273,7 @@ CirclePacker.prototype.hasItemMoved = function hasItemMoved ( positions ) {
 		
 	for ( var id in positions ) {
 		if (
-			Math.abs( positions[id].delta.x ) > 0.005 && 
+			Math.abs( positions[id].delta.x ) > 0.005 || 
 			Math.abs( positions[id].delta.y ) > 0.005
 		) {
 			result = true;
