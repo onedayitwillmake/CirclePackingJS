@@ -14,7 +14,7 @@ function processWorkerMessage ( event ) {
 
 function isCircleValid ( circle ) {
 	return circle &&
-		circle.id &&
+		(circle.id !== null && circle.id !== undefined) &&
 		circle.radius &&
 		circle.position &&
 		typeof circle.position.x === 'number' &&
