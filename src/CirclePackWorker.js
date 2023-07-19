@@ -1,124 +1,138 @@
-// this code is mostly for message passing between the 
+// this code is mostly for message passing between the
 // PackedCircleManager and CirclePacker classes
-
 import PackedCircle from './PackedCircle.js';
 import PackedCircleManager from './PackedCircleManager.js';
 import Vector from './Vector.js';
 import { sendWorkerMessage, processWorkerMessage } from './util.js';
 
-self.addEventListener( 'message', receivedMessage );
+self.addEventListener('message', receivedMessage);
 
 const circleManager = new PackedCircleManager();
 
-function receivedMessage ( event ) {
-	const { type, message } = processWorkerMessage( event );
+/**
+ * Handle message events that were received from the main script
+ * and trigger the appropriate actions
+ *
+ * @param {WorkerMessage} event
+ */
+function receivedMessage(event) {
+	const message = processWorkerMessage(event);
 
-	if ( type === 'bounds' )  {
-		circleManager.setBounds( message );
-	}
+	if (message) {
+		const { action } = message;
 
-	if ( type === 'target' )  {
-		setTarget( message );
-	}
-
-	if ( type === 'addcircles' ) {
-		addCircles( message );
-	}
-
-	if ( type === 'removecircle' ) {
-		circleManager.removeCircle( message );
-	}
-
-	if ( type === 'update' ) {
-		update();
-	}
-
-	if ( type === 'dragstart' ) {
-		circleManager.dragStart( message.id, message.position );
-	}
-
-	if ( type === 'drag' ) {
-		circleManager.drag( message.id, message.position );
-	}
-
-	if ( type === 'dragend' ) {
-		circleManager.dragEnd( message.id );
-	}
-
-	if ( type === 'pincircle' ) {
-		circleManager.pinCircle( message );
-	}
-
-	if ( type === 'unpincircle' ) {
-		circleManager.unpinCircle( message );
-	}
-
-	if ( type === 'centeringpasses' ) {
-		if ( typeof message === 'number' && message > 0 ) {
-			circleManager.numberOfCenteringPasses = message;
+		switch (action.type) {
+			case 'SET_BOUNDS':
+				circleManager.setBounds(action.bounds);
+				break;
+			case 'SET_CENTERING_PASSES':
+				circleManager.numberOfCenteringPasses = action.numberOfCenteringPasses;
+				break;
+			case 'SET_COLLISION_PASSES':
+				circleManager.numberOfCollisionPasses = action.numberOfCollisionPasses;
+				break;
+			case 'SET_DAMPING':
+				circleManager.damping = action.damping;
+				break;
+			case 'SET_CENTER_PULL':
+				circleManager.setCenterPull(action.centerPull);
+				break;
+			case 'UPDATE':
+				update();
+				break;
+			case 'ADD_CIRCLES':
+				addCircles(action.circles);
+				break;
+			case 'REMOVE_CIRCLE':
+				circleManager.removeCircle(action.id);
+				break;
+			case 'DRAG_START':
+				circleManager.dragStart(action.id);
+				break;
+			case 'DRAG_END':
+				circleManager.dragEnd(action.id);
+				break;
+			case 'DRAG_MOVE':
+				circleManager.drag(action.id, action.position);
+				break;
+			case 'SET_CIRCLE_RADIUS':
+				circleManager.setCircleRadius(action.id, action.radius);
+				break;
+			case 'SET_CIRCLE_CENTER_PULL':
+				circleManager.setCircleCenterPull(action.id, action.centerPull);
+				break;
+			case 'PIN_CIRCLE':
+				circleManager.pinCircle(action.id);
+				break;
+			case 'UNPIN_CIRCLE':
+				circleManager.unpinCircle(action.id);
+				break;
+			case 'SET_TARGET':
+				setTarget(action.target);
+				break;
+			default:
+				break;
 		}
 	}
+}
 
-	if ( type === 'collisionpasses' ) {
-		if ( typeof message === 'number' && message > 0 ) {
-			circleManager.numberOfCollisionPasses = message;
-		}
-	}
+/**
+ * Send message back to the main script
+ *
+ * @param {WorkerResponse} response
+ */
+function respondWith(response) {
+	sendWorkerMessage(self, response);
+}
 
-	if ( type === 'damping' ) {
-		if ( typeof message === 'number' && message > 0 ) {
-			circleManager.damping = message;
-		}
-	}
-
-	if ( type === 'circleradius' ) {
-		circleManager.setCircleRadius( message.id, message.radius );
-	}
-
-	if ( type === 'circlecenterpull' ) {
-		circleManager.setCircleCenterPull( message.id, message.centerPull );
-	}
-
-	if ( type === 'centerpull' ) {
-		circleManager.setCenterPull( message.centerPull );
+/**
+ * Create new circles based on the received circle data
+ *
+ * @param {PackedCircleData[]} circles - The circles to add
+ */
+function addCircles(circles) {
+	if (Array.isArray(circles) && circles.length) {
+		circles.forEach(circleManager.addCircle.bind(circleManager));
 	}
 }
 
-function updatePage ( type, message ) {
-	sendWorkerMessage( self, { type, message } );
-}
-
-function addCircles ( circles ) {
-	if ( Array.isArray( circles ) && circles.length ) {
-		circles.forEach( circleManager.addCircle.bind( circleManager ) );
+/**
+ * Update the pull targets position
+ *
+ * @param {VectorData} target - The new target position
+ */
+function setTarget(target) {
+	if (target && typeof target.x === 'number' && typeof target.y === 'number') {
+		circleManager.setTarget(new Vector(target));
 	}
 }
 
-function setTarget ( target ) {
-	if ( target && typeof target.x === 'number' && typeof target.y === 'number' ) {
-		circleManager.setTarget( new Vector( target ) );
-	}
-}
-
-function update () {
+/**
+ * Calculate the next circle positions
+ */
+function update() {
 	circleManager.updatePositions();
 
 	sendPositions();
 }
 
-function sendPositions () {
-	const positions = circleManager.allCircles.reduce( ( result, circle ) => {
+/**
+ * Send the new circle positions to the main script
+ */
+function sendPositions() {
+	const positions = circleManager.allCircles.reduce((result, circle) => {
 		result[circle.id] = {
+			id: circle.id,
 			position: circle.position,
 			previousPosition: circle.previousPosition,
 			radius: circle.radius,
 			delta: circle.delta,
 			isPulledToCenter: circle.isPulledToCenter,
-			isPinned: circle.isPinned
+			isPinned: circle.isPinned,
 		};
 
 		return result;
-	}, { } );
+	}, {});
 
-	updatePage( 'move', positions );
+	respondWith({ type: 'MOVED', updatedCircles: positions });
 }

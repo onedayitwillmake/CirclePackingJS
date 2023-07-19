@@ -1,38 +1,43 @@
 {
-  "name": "circlepacker",
-  "version": "1.1.7",
-  "description": "circle packing in a webworker",
-  "keywords": [
-    "circkepacker",
-    "circle",
-    "packing",
-    "webworker",
-    "browser"
-  ],
-  "main": "dist/circlepacker.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npm run build-es6 && npm run build-es5 && npm run build-min && npm run build-min-es5",
-    "build-es6": "node build.js",
-    "build-es5": "node build.js -e",
-    "build-min": "node build.js -m",
-    "build-min-es5": "node build.js -me"
-  },
-  "module": "dist/circlepacker.es6.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/snorpey/circlepacker.git"
-  },
-  "author": "Georg Fischer <snorpey@gmail.com>",
-  "license": "MIT",
-  "devDependencies": {
-    "commander": "^2.9.0",
-    "rollup": "^0.41.4",
-    "rollup-plugin-buble": "^0.15.0",
-    "uglify-js": "github:mishoo/UglifyJS2#harmony"
-  },
-  "bugs": {
-    "url": "https://github.com/snorpey/circlepacker/issues"
-  },
-  "homepage": "https://github.com/snorpey/circlepacker#readme"
+	"name": "circlepacker",
+	"version": "1.1.7",
+	"description": "circle packing in a webworker",
+	"keywords": [
+		"circkepacker",
+		"circle",
+		"packing",
+		"webworker",
+		"browser"
+	],
+	"main": "dist/circlepacker.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "npm run build-es6 && npm run build-es5 && npm run build-min && npm run build-min-es5 && npm run generate-types",
+		"build-es6": "node build.mjs",
+		"build-es5": "node build.mjs -e",
+		"build-min": "node build.mjs -m",
+		"build-min-es5": "node build.mjs -me",
+		"generate-types": "tsc"
+	},
+	"module": "dist/circlepacker.es6.js",
+	"types": "dist/types.d.ts",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/snorpey/circlepacker.git"
+	},
+	"author": "Georg Fischer <hi@snorpey.com>",
+	"license": "MIT",
+	"devDependencies": {
+		"@rollup/plugin-terser": "^0.4.3",
+		"commander": "^11.0.0",
+		"rollup": "^3.26.3",
+		"rollup-plugin-buble": "^0.19.8",
+		"rollup-plugin-cleanup": "^3.2.1",
+		"typescript": "^5.1.6",
+		"uglify-js": "3.17.4"
+	},
+	"bugs": {
+		"url": "https://github.com/snorpey/circlepacker/issues"
+	},
+	"homepage": "https://github.com/snorpey/circlepacker#readme"
 }

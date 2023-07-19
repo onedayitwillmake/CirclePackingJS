@@ -5,147 +5,175 @@
 import PackedCircle from './PackedCircle.js';
 import Vector from './Vector.js';
 
+/**
+ * The PackedCircleManager handles updating the state. It runs in a web worker
+ *
+ */
 export default class PackedCircleManager {
-	constructor () {
-		this.allCircles = [ ];
-		this.pinnedCircleIds = [ ];
-		this.desiredTarget = new Vector( 0, 0 );
+	/**
+	 * Creates an instance of PackedCircleManager.
+	 *
+	 * @constructor
+	 */
+	constructor() {
+		/** @type {PackedCircle[]} */
+		this.allCircles = [];
+
+		/** @type {CircleID[]} */
+		this.pinnedCircleIds = [];
+
+		/** @type {Vector | undefined} */
+		this.desiredTarget = new Vector(0, 0);
+
+		/** @type {BoundsData} */
 		this.bounds = { left: 0, top: 0, right: 0, bottom: 0 };
+
+		/** @type {number} */
 		this.damping = 0.025;
 
 		// Number of passes for the centering and collision
 		// algorithms - it's (O)logN^2 so use increase at your own risk!
 		// Play with these numbers - see what works best for your project
+
+		/** @type {number} */
 		this.numberOfCenteringPasses = 1;
+
+		/** @type {number} */
 		this.numberOfCollisionPasses = 3;
 
+		/** @type {boolean} */
 		this.isCenterPullActive = true;
 	}
 
 	/**
 	 * Set the boundary rectangle for the circle packing.
 	 * This is used to locate the 'center'
-	 * @param aBoundaryObject
+	 *
+	 * @param {BoundsData} aBoundaryObject - The boundary to set
 	 */
-	setBounds ( aBoundaryObject ) {
-		if ( typeof aBoundaryObject.left === 'number' ) {
+	setBounds(aBoundaryObject) {
+		if (typeof aBoundaryObject.left === 'number') {
 			this.bounds.left = aBoundaryObject.left;
 		}
 
-		if ( typeof aBoundaryObject.right === 'number' ) {
+		if (typeof aBoundaryObject.right === 'number') {
 			this.bounds.right = aBoundaryObject.right;
 		}
 
-		if ( typeof aBoundaryObject.top === 'number' ) {
+		if (typeof aBoundaryObject.top === 'number') {
 			this.bounds.top = aBoundaryObject.top;
 		}
 
-		if ( typeof aBoundaryObject.bottom === 'number' ) {
+		if (typeof aBoundaryObject.bottom === 'number') {
 			this.bounds.bottom = aBoundaryObject.bottom;
 		}
 
-		if ( typeof aBoundaryObject.width === 'number' ) {
+		if (typeof aBoundaryObject.width === 'number') {
 			this.bounds.right = this.bounds.left + aBoundaryObject.width;
 		}
 
-		if ( typeof aBoundaryObject.height === 'number' ) {
+		if (typeof aBoundaryObject.height === 'number') {
 			this.bounds.bottom = this.bounds.top + aBoundaryObject.height;
 		}
 	}
 
 	/**
 	 * Add a circle
-	 * @param aCircle A Circle to add, should already be created.
+	 *
+	 * @param {CircleData | PackedCircle} aCircle - A Circle to add, should already be created.
 	 */
-	addCircle ( aCircle ) {
-		if ( ! ( aCircle instanceof PackedCircle ) ) {
-			aCircle = new PackedCircle( {
+	addCircle(aCircle) {
+		if (!(aCircle instanceof PackedCircle)) {
+			aCircle = new PackedCircle({
 				id: aCircle.id,
 				radius: aCircle.radius,
 				x: aCircle.position.x || 0,
 				y: aCircle.position.y || 0,
 				isPinned: aCircle.isPinned || false,
-				isPulledToCenter: typeof aCircle.isPulledToCenter === 'boolean' ? aCircle.isPulledToCenter : true
-			} );
+				isPulledToCenter:
+					typeof aCircle.isPulledToCenter === 'boolean' ? aCircle.isPulledToCenter : true,
+			});
 		}
 
-		this.allCircles.push( aCircle );
+		this.allCircles.push(aCircle);
 		aCircle.targetPosition = this.desiredTarget.cp();
 	}
 
 	/**
 	 * Remove a circle
-	 * @param circleToRemoveId Id of the circle to remove
+	 *
+	 * @param {CircleID} circleToRemoveId - Id of the circle to remove
 	 */
-	removeCircle ( circleToRemoveId ) {
-		const indicesToRemove = this.allCircles.reduce( ( indices, circle, index ) => {
-			if ( circle.id === circleToRemoveId ) {
-				indices.push( index );
-			}
-
-			return indices;
-		}, [ ] );
-
-		for ( let n = indicesToRemove.length - 1; n >= 0; n-- ) {
-			this.allCircles.splice( indicesToRemove[n], 1 );
-		}
+	removeCircle(circleToRemoveId) {
+		const circlesToRemove = this.allCircles.filter(circle => circle.id === circleToRemoveId);
+		this.allCircles = this.allCircles.filter(circle => circle.id !== circleToRemoveId);
 	}
 
 	/**
 	 * Recalculate all circle positions
 	 */
-	updatePositions () {
-		var circleList = this.allCircles;
-		var circleCount = circleList.length;
+	updatePositions() {
+		const circleList = this.allCircles;
+		const circleCount = circleList.length;
 
 		// store information about the previous position
-		for ( let i = 0; i < circleCount; ++i ) {
+		for (let i = 0; i < circleCount; ++i) {
 			const circle = circleList[i];
 
 			circle.previousPosition = circle.position.cp();
 		}
 
-		if ( this.desiredTarget && this.isCenterPullActive ) {
+		if (this.desiredTarget && this.isCenterPullActive) {
 			// Push all the circles to the target - in my case the center of the bounds
-			this.pushAllCirclesTowardTarget( this.desiredTarget );
+			this.pushAllCirclesTowardTarget(this.desiredTarget);
 		}
-		
+
 		// Make the circles collide and adjust positions to move away from each other
 		this.handleCollisions();
 
 		// store information about the previous position
-		for ( let i = 0; i < circleCount; ++i ) {
+		for (let i = 0; i < circleCount; ++i) {
 			const circle = circleList[i];
 
-			this.handleBoundaryForCircle( circle );
+			this.handleBoundaryForCircle(circle);
 		}
 	}
 
-	pushAllCirclesTowardTarget ( aTarget ) {
-		var v = new Vector( 0, 0 );
+	/**
+	 * Update all circles to move towards a target position
+	 *
+	 * @param {VectorData} aTarget
+	 */
+	pushAllCirclesTowardTarget(aTarget) {
+		const circleMovement = new Vector(0, 0);
 
-		var dragCircle = this.draggedCircle;
-		var circleList = this.allCircles;
-		var circleCount = circleList.length;
+		const dragCircle = this.draggedCircle;
+		const circleList = this.allCircles;
+		const circleCount = circleList.length;
 
-		for ( var n = 0; n < this.numberOfCenteringPasses; n++ ) {			
-			for ( var i = 0; i < circleCount; i++ ) {
-				var circle = circleList[i];
-				
-				if ( circle.isPulledToCenter ) {
+		for (
+			let centeringPassNumber = 0;
+			centeringPassNumber < this.numberOfCenteringPasses;
+			centeringPassNumber++
+		) {
+			for (let circleIndex = 0; circleIndex < circleCount; circleIndex++) {
+				const circle = circleList[circleIndex];
+
+				if (circle.isPulledToCenter) {
 					// Kinematic circles can't be pushed around.
-					const isCircleKinematic = circle === dragCircle || this.isCirclePinned( circle.id );
+					const isCircleKinematic =
+						circle === dragCircle || this.isCirclePinned(circle.id);
 
-					if ( isCircleKinematic ) {
+					if (isCircleKinematic) {
 						continue;
 					}
 
-					v.x = circle.position.x - aTarget.x;
-					v.y = circle.position.y - aTarget.y;
-					v.mul ( this.damping );
-					
-					circle.position.x -= v.x;
-					circle.position.y -= v.y;
+					circleMovement.x = circle.position.x - aTarget.x;
+					circleMovement.y = circle.position.y - aTarget.y;
+					circleMovement.mul(this.damping);
+
+					circle.position.x -= circleMovement.x;
+					circle.position.y -= circleMovement.y;
 				}
 			}
 		}
@@ -155,74 +183,81 @@ export default class PackedCircleManager {
 	 * Packs the circles towards the center of the bounds.
 	 * Each circle will have it's own 'targetPosition' later on
 	 */
-	handleCollisions () {
-		var v = new Vector( 0, 0 );
+	handleCollisions() {
+		const circleCollisionMovement = new Vector(0, 0);
 
-		var dragCircle = this.draggedCircle;
-		var circleList = this.allCircles;
-		var circleCount = circleList.length;
+		const dragCircle = this.draggedCircle;
+		const circleList = this.allCircles;
+		const circleCount = circleList.length;
 
 		// Collide circles
-		for ( var n = 0; n < this.numberOfCollisionPasses; n++ ) {
-			for ( var i = 0; i < circleCount; i++ ) {
-				var circleA = circleList[i];
-				
-				for ( var j = i + 1; j < circleCount; j++ ) {
-					var circleB = circleList[j];
+		for (
+			let collisionPassNumber = 0;
+			collisionPassNumber < this.numberOfCollisionPasses;
+			collisionPassNumber++
+		) {
+			for (let circleAIndex = 0; circleAIndex < circleCount; circleAIndex++) {
+				var circleA = circleList[circleAIndex];
 
-					const isCircleAPinned = this.isCirclePinned( circleA.id );
-					const isCircleBPinned = this.isCirclePinned( circleB.id );
+				for (
+					let circleBIndex = circleAIndex + 1;
+					circleBIndex < circleCount;
+					circleBIndex++
+				) {
+					var circleB = circleList[circleBIndex];
+
+					const isCircleAPinned = this.isCirclePinned(circleA.id);
+					const isCircleBPinned = this.isCirclePinned(circleB.id);
 
 					// Kinematic circles can't be pushed around.
 					const isCircleAKinematic = circleA === dragCircle || isCircleAPinned;
 					const isCircleBKinematic = circleB === dragCircle || isCircleBPinned;
-					
+
 					if (
 						// It's us!
 						circleA === circleB ||
-
 						// Kinematic circles don't interact with eachother
-						( isCircleAKinematic && isCircleBKinematic )
+						(isCircleAKinematic && isCircleBKinematic)
 					) {
-						continue; 
+						continue;
 					}
 
-					var dx = circleB.position.x - circleA.position.x;
-					var dy = circleB.position.y - circleA.position.y;
+					const dx = circleB.position.x - circleA.position.x;
+					const dy = circleB.position.y - circleA.position.y;
 
-					// The distance between the two circles radii, 
-					// but we're also gonna pad it a tiny bit 
-					var r = ( circleA.radius + circleB.radius ) * 1.08;
-					var d = circleA.position.distanceSquared( circleB.position );
+					// The distance between the two circles radii,
+					// but we're also gonna pad it a tiny bit
+					const combinedRadii = (circleA.radius + circleB.radius) * 1.08;
+					const distanceSquared = circleA.position.distanceSquared(circleB.position);
 
-					if ( d < ( r * r ) - 0.02 ) {
-						v.x = dx;
-						v.y = dy;
-						v.normalize();
+					if (distanceSquared < combinedRadii * combinedRadii - 0.02) {
+						circleCollisionMovement.x = dx;
+						circleCollisionMovement.y = dy;
+						circleCollisionMovement.normalize();
 
-						var inverseForce = ( r - Math.sqrt( d ) ) * 0.5;
-						v.mul( inverseForce );
-						
-						if ( ! isCircleBKinematic ) {
-							if ( isCircleAKinematic ) {
-								// Double inverse force to make up 
+						const inverseForce = (combinedRadii - Math.sqrt(distanceSquared)) * 0.5;
+						circleCollisionMovement.mul(inverseForce);
+
+						if (!isCircleBKinematic) {
+							if (isCircleAKinematic) {
+								// Double inverse force to make up
 								// for the fact that the other object is fixed
-								v.mul( 2.2 );
+								circleCollisionMovement.mul(2.2);
 							}
 
-							circleB.position.x += v.x;
-							circleB.position.y += v.y;
+							circleB.position.x += circleCollisionMovement.x;
+							circleB.position.y += circleCollisionMovement.y;
 						}
 
-						if ( ! isCircleAKinematic ) {
-							if ( isCircleBKinematic ) {
-								// Double inverse force to make up 
+						if (!isCircleAKinematic) {
+							if (isCircleBKinematic) {
+								// Double inverse force to make up
 								// for the fact that the other object is fixed
-								v.mul( 2.2 );
+								circleCollisionMovement.mul(2.2);
 							}
 
-							circleA.position.x -= v.x;
-							circleA.position.y -= v.y;
+							circleA.position.x -= circleCollisionMovement.x;
+							circleA.position.y -= circleCollisionMovement.y;
 						}
 					}
 				}
@@ -230,31 +265,36 @@ export default class PackedCircleManager {
 		}
 	}
 
-	handleBoundaryForCircle ( aCircle ) {		
+	/**
+	 * Ensure the circle stays inside the boundaries
+	 *
+	 * @param {PackedCircle} aCircle - The circle to check
+	 */
+	handleBoundaryForCircle(aCircle) {
 		const x = aCircle.position.x;
 		const y = aCircle.position.y;
 		const radius = aCircle.radius;
-		
-		let overEdge = false;
 
-		if ( x + radius >= this.bounds.right ) {
+		let isOverEdge = false;
+
+		if (x + radius >= this.bounds.right) {
 			aCircle.position.x = this.bounds.right - radius;
-			overEdge = true;
-		} else if ( x - radius < this.bounds.left ) {
+			isOverEdge = true;
+		} else if (x - radius < this.bounds.left) {
 			aCircle.position.x = this.bounds.left + radius;
-			overEdge = true;
+			isOverEdge = true;
 		}
 
-		if ( y + radius > this.bounds.bottom ) {
+		if (y + radius > this.bounds.bottom) {
 			aCircle.position.y = this.bounds.bottom - radius;
-			overEdge = true;
-		} else if ( y - radius < this.bounds.top ) {
+			isOverEdge = true;
+		} else if (y - radius < this.bounds.top) {
 			aCircle.position.y = this.bounds.top + radius;
-			overEdge = true;
+			isOverEdge = true;
 		}
 
 		// end dragging if user dragged over edge
-		if ( overEdge && aCircle === this.draggedCircle ) {
+		if (isOverEdge && aCircle === this.draggedCircle) {
 			this.draggedCircle = null;
 		}
 	}
@@ -262,91 +302,145 @@ export default class PackedCircleManager {
 	/**
 	 * Force a certain circle to be the 'draggedCircle'.
 	 * Can be used to undrag a circle by calling setDraggedCircle(null)
-	 * @param aCircle  Circle to start dragging. It's assumed to be part of our list. No checks in place currently.
+	 * @param {PackedCircle | null} aCircle - Circle to start dragging. It's assumed to be part of our list. No checks in place currently.
 	 */
-	setDraggedCircle ( aCircle ) {
+	setDraggedCircle(aCircle) {
 		// Setting to null, and we had a circle before.
 		// Restore the radius of the circle as it was previously
-		if ( this.draggedCircle && this.draggedCircle !== aCircle ) {
-			this.draggedCircle.radius = this.draggedCircle.originalRadius;
-		}
+		// if (this.draggedCircle && this.draggedCircle !== aCircle) {
+		// 	this.draggedCircle.radius = this.draggedCircle.originalRadius;
+		// }
 
 		this.draggedCircle = aCircle;
 	}
 
-	dragStart ( id ) {
-		const draggedCircle = this.allCircles.filter( circle => circle.id === id )[0];
-		this.setDraggedCircle( draggedCircle );
+	/**
+	 * Mark circle as dragging
+	 *
+	 * @param {CircleID} id - The ID of the circle we're dragging
+	 */
+	dragStart(id) {
+		const draggedCircle = this.allCircles.filter(circle => circle.id === id)[0];
+		this.setDraggedCircle(draggedCircle);
 	}
 
-	dragEnd ( id ) {
-		if ( this.draggedCircle ) {
-			this.setDraggedCircle( null );
+	/**
+	 * Mark dragged circle as no longer dragging
+	 */
+	dragEnd() {
+		if (this.draggedCircle) {
+			// this.setDraggedCircle(null);
+			this.draggedCircle = null;
 		}
 	}
 
-	drag ( id, position ) {
-		if ( this.draggedCircle && position ) {
+	/**
+	 * Update the position of the circle that is being dragged
+	 *
+	 * @param {CircleID} id - The id of the circle being dragged
+	 * @param {VectorData | Vector} position - The new position of the dragged circle
+	 */
+	drag(id, position) {
+		if (this.draggedCircle && position) {
 			this.draggedCircle.position.x = position.x;
 			this.draggedCircle.position.y = position.y;
 		}
 	}
 
-	isCirclePinned ( id ) {
-		const circle = this.circleById( id );
+	/**
+	 * Check if circle is marked as pinned
+	 *
+	 * @param {CircleID} id - The id of the circle to check
+	 * @returns {boolean}
+	 */
+	isCirclePinned(id) {
+		const circle = this.circleById(id);
 
-		if ( circle ) {
+		if (circle) {
 			return circle.isPinned;
 		}
 
 		return false;
 	}
 
-	pinCircle ( id ) {
-		const circle = this.circleById( id );
+	/**
+	 * Mark circle as pinned
+	 *
+	 * @param {CircleID} id - The id of the circle we want to pin
+	 */
+	pinCircle(id) {
+		const circle = this.circleById(id);
 
-		if ( circle ) {
+		if (circle) {
 			circle.isPinned = true;
 		}
 	}
 
-	unpinCircle ( id ) {
-		const circle = this.circleById( id );
+	/**
+	 * Mark circle as no longer pinned
+	 *
+	 * @param {CircleID} id - The id of the circle we want to unpin
+	 */
+	unpinCircle(id) {
+		const circle = this.circleById(id);
 
-		if ( circle ) {
+		if (circle) {
 			circle.isPinned = false;
 		}
 	}
 
-	setCircleRadius ( id, radius ) {
-		const circle = this.circleById( id );
+	/**
+	 * set the radius of a circle
+	 *
+	 * @param {CircleID} id - The id of the circle we want to update the radius of
+	 * @param {number} radius - The new radius
+	 */
+	setCircleRadius(id, radius) {
+		const circle = this.circleById(id);
 
-		if ( circle ) {
-			circle.setRadius( radius );
+		if (circle) {
+			circle.setRadius(radius);
 		}
 	}
 
-	setCircleCenterPull ( id, centerPull ) {
-		const circle = this.circleById( id );
+	/**
+	 * Update the centerPull value of a circle
+	 *
+	 * @param {CircleID} id - The id of the circle
+	 * @param {boolean} centerPull - The centerPull value
+	 */
+	setCircleCenterPull(id, centerPull) {
+		const circle = this.circleById(id);
 
-		if ( circle ) {
+		if (circle) {
 			circle.isPulledToCenter = centerPull;
 		}
 	}
 
-	setCenterPull ( centerPull ) {
+	/**
+	 * Set a global centerPull value
+	 *
+	 * @param {boolean} centerPull - The global canterPull value
+	 */
+	setCenterPull(centerPull) {
 		this.isCenterPullActive = centerPull;
 	}
 
-	circleById ( id ) {
-		return this.allCircles.filter( circle => circle.id === id )[0];
+	/**
+	 * Gets a circle by its id
+	 *
+	 * @param {CircleID} id - The id of the circle we want
+	 * @returns {PackedCircle | undefined}
+	 */
+	circleById(id) {
+		return this.allCircles.filter(circle => circle.id === id)[0];
 	}
 
 	/**
 	 * Sets the target position where the circles want to be
-	 * @param aPosition
+	 * @param {VectorData} aPosition - The position of the centerPull target
 	 */
-	setTarget ( aPosition ) {
+	setTarget(aPosition) {
 		this.desiredTarget = aPosition;
 	}
 }

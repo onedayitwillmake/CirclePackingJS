@@ -1,178 +1,171 @@
 <!doctype html>
 <html>
-	<head>
-		<title>circlepacker</title>
-	</head>
-	<style>
-		body { padding: 50px; color: #666; font-family: sans-serif; font-size: 16px; }
-		a { color: #06f; text-decoration: none; }
-		a:hover { text-decoration: underline; }
-		h1 { font-size: 16px; color: #333; }
-		.text { width: 300px; margin-bottom: 30px; }
-		.container { width: 300px; height: 300px; background: #ccc; position: relative; }
-		.circle { background-color: #666; position: absolute; top: 0; left: 0; display: none; 
-    -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
-		.circle.is-visible { display: block; cursor: pointer; }
-		.circle:hover { background-color: #000 }
-	</style>
-	<body>
-		<article class="text">
-			<h1>one time drawing</h1>
-			<p>the circle positions are calculated just once. you can use the buttons below to update the display</p>
-			<p><a href="index.html">back to index</a></p>
-		</article>
-		<div class="container"></div>
-		<button id="add-circle">add circle</button>
-		<button id="delete-circle">delete circle</button>
-		<button id="random-size">random size</button>
-		<script src="../dist/circlepacker.js"></script>
-		<script>
-var containerEl = document.querySelector( '.container' );
-var addButtonEl = document.querySelector( '#add-circle' );
-var deleteButtonEl = document.querySelector( '#delete-circle' );
-var randomButtonEl = document.querySelector( '#random-size' );
 
-// references to all circle elements
-var circleEls = { };
+<head>
+	<meta charset="utf-8" />
+	<title>circlepacker static rendering demo</title>
+	<link rel="stylesheet" href="./example.css" />
+</head>
 
-// dimenstions of container
-var rect = containerEl.getBoundingClientRect();
-var bounds = { width: rect.width, height: rect.height };
-var target = { x: bounds.width / 2, y: bounds.height / 2 };
+<body>
+	<article class="text">
+		<h1>one time drawing</h1>
+		<p>the circle positions are calculated just once. you can use the buttons below to update the display</p>
+		<p><a href="index.html">back to index</a></p>
+	</article>
+	<div class="container"></div>
+	<button id="add-circle">add circle</button>
+	<button id="delete-circle">delete circle</button>
+	<button id="random-size">random size</button>
+	<script src="../dist/circlepacker.js"></script>
+	<script>
+		var containerEl = document.querySelector('.container');
+		var addButtonEl = document.querySelector('#add-circle');
+		var deleteButtonEl = document.querySelector('#delete-circle');
+		var randomButtonEl = document.querySelector('#random-size');
 
-var isDragging = false;
+		// references to all circle elements
+		var circleEls = {};
 
-var circles = [
-	createCircle(),
-	createCircle(),
-	createCircle(),
-	createCircle(),
-	createCircle()
-];
+		// dimenstions of container
+		var rect = containerEl.getBoundingClientRect();
+		var bounds = { width: rect.width, height: rect.height };
+		var target = { x: bounds.width / 2, y: bounds.height / 2 };
 
-var packer = new CirclePacker( {
-	bounds: bounds,
-	target: target,
-	circles: circles,
-	onMove: render,
-	continuousMode: false,
-	collisionPasses: 5,
-	centeringPasses: 200
-} );
+		var isDragging = false;
 
-addButtonEl.addEventListener( 'click', addRandomCircle );
-deleteButtonEl.addEventListener( 'click', removeRandomCircle );
-randomButtonEl.addEventListener( 'click', setRandomBounds );
+		var circles = [
+			createCircle(),
+			createCircle(),
+			createCircle(),
+			createCircle(),
+			createCircle()
+		];
 
-// start calculations
-packer.update();
+		var packer = new CirclePacker({
+			bounds: bounds,
+			target: target,
+			circles: circles,
+			onMove: render,
+			continuousMode: false,
+			collisionPasses: 5,
+			centeringPasses: 200
+		});
 
-function addRandomCircle () {
-	packer.addCircle( createCircle() );
-	packer.update();
-}
+		addButtonEl.addEventListener('click', addRandomCircle);
+		deleteButtonEl.addEventListener('click', removeRandomCircle);
+		randomButtonEl.addEventListener('click', setRandomBounds);
 
-function removeRandomCircle () {
-	var ids = Object.keys( circleEls );
-	var idToDelete = ids[random( 0, ids.length, true )];
+		// start calculations
+		packer.update();
 
-	removeCircle( idToDelete );
-	packer.update();
-}
-
-function setRandomBounds () {
-	bounds = {
-		width: random( 200, 500, true ),
-		height: random( 200, 500, true )
-	};
-
-	containerEl.style.width = bounds.width + 'px';
-	containerEl.style.height = bounds.height + 'px';
-
-	packer.setBounds( bounds );
-}
-
-// create circle dom object, return circle data
-function createCircle ( x, y, radius ) {
-	radius = radius || random( 10, 40 );
-	x = x || random( radius, bounds.width - radius );
-	y = y || random( radius, bounds.height - radius );
-
-	var diameter = radius * 2;
-	var circleEl = document.createElement( 'div' );
-	
-	// need some sort of unique id...
-	var id = 'circle-' + random( 0, 1000, true ) + '-' + Date.now();
-
-	var circle =  {
-		id: id,
-		radius: radius,
-		position: {
-			x: random( radius, bounds.width - radius ),
-			y: random( radius, bounds.height - radius )
+		function addRandomCircle() {
+			packer.addCircle(createCircle());
+			packer.update();
 		}
-	};
 
-	// create circle element
-	circleEl.id = id;
-	circleEl.style.width = diameter + 'px';
-	circleEl.style.height = diameter + 'px';
-	circleEl.style.borderRadius = diameter + 'px';
-	circleEl.classList.add( 'circle' );
-		
-	containerEl.appendChild( circleEl );
+		function removeRandomCircle() {
+			var ids = Object.keys(circleEls);
+			var idToDelete = ids[random(0, ids.length, true)];
 
-	circleEls[id] = circleEl;
+			removeCircle(idToDelete);
+			packer.update();
+		}
 
-	return circle;
-}
+		function setRandomBounds() {
+			bounds = {
+				width: random(200, 500, true),
+				height: random(200, 500, true)
+			};
 
-function removeCircle ( id ) {
-	packer.removeCircle( id );
-	
-	requestAnimationFrame( function () {
-		containerEl.removeChild( circleEls[id] );
-		delete circleEls[id];
-	} );
-}
+			containerEl.style.width = bounds.width + 'px';
+			containerEl.style.height = bounds.height + 'px';
 
-function render ( circles ) {
-	requestAnimationFrame( function () {
-		for ( var id in circles ) {
-			var circleEl = circleEls[id];
+			packer.setBounds(bounds);
+		}
 
-			if ( circleEl ) {
-				var circle = circles[id];
-				var x = circle.position.x - circle.radius;
-				var y = circle.position.y - circle.radius;
+		// create circle dom object, return circle data
+		function createCircle(x, y, radius) {
+			radius = radius || random(10, 40);
+			x = x || random(radius, bounds.width - radius);
+			y = y || random(radius, bounds.height - radius);
 
-				// actually move the circles around
-				circleEl.style.transform = 'translateX(' + x + 'px) translateY(' + y + 'px)';
-				circleEl.classList.add( 'is-visible' );
+			var diameter = radius * 2;
+			var circleEl = document.createElement('div');
+
+			// need some sort of unique id...
+			var id = 'circle-' + random(0, 1000, true) + '-' + Date.now();
+
+			var circle = {
+				id: id,
+				radius: radius,
+				position: {
+					x: random(radius, bounds.width - radius),
+					y: random(radius, bounds.height - radius)
+				}
+			};
+
+			// create circle element
+			circleEl.id = id;
+			circleEl.style.width = diameter + 'px';
+			circleEl.style.height = diameter + 'px';
+			circleEl.style.borderRadius = diameter + 'px';
+			circleEl.classList.add('circle');
+
+			containerEl.appendChild(circleEl);
+
+			circleEls[id] = circleEl;
+
+			return circle;
+		}
+
+		function removeCircle(id) {
+			packer.removeCircle(id);
+
+			requestAnimationFrame(function () {
+				containerEl.removeChild(circleEls[id]);
+				delete circleEls[id];
+			});
+		}
+
+		function render(circles) {
+			requestAnimationFrame(function () {
+				for (var id in circles) {
+					var circleEl = circleEls[id];
+
+					if (circleEl) {
+						var circle = circles[id];
+						var x = circle.position.x - circle.radius;
+						var y = circle.position.y - circle.radius;
+
+						// actually move the circles around
+						circleEl.style.transform = 'translateX(' + x + 'px) translateY(' + y + 'px)';
+						circleEl.classList.add('is-visible');
+					}
+				}
+			});
+		}
+
+		function random(min, max, intResult) {
+			if (typeof min !== 'number' && typeof max !== 'number') {
+				min = 0;
+				max = 1;
 			}
+
+			if (typeof max !== 'number') {
+				max = min;
+				min = 0;
+			}
+
+			var result = min + Math.random() * (max - min);
+
+			if (intResult) {
+				result = parseInt(result, 10);
+			}
+
+			return result;
 		}
-	} );
-}
+	</script>
+</body>
 
-function random ( min, max, intResult ) {
-	if ( typeof min !== 'number' && typeof max !== 'number' ) {
-		min = 0;
-		max = 1;
-	}
-
-	if ( typeof max !== 'number' ) {
-		max = min;
-		min = 0;
-	}
-
-	var result = min + Math.random() * ( max - min );
-
-	if ( intResult ) {
-		result = parseInt( result, 10 );
-	}
-
-	return result;
-}
-		</script>
-	</body>
 </html>

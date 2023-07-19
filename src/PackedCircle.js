@@ -4,48 +4,88 @@
 
 import Vector from './Vector.js';
 
+/**
+ * The Packed circle contains information about a Packed circle
+ */
 export default class PackedCircle {
-	constructor ( { id, radius, x, y, isPulledToCenter, isPinned } ) {
+	/**
+	 * Creates an instance of PackedCircle.
+	 *
+	 * @constructor
+	 * @param {PackedCircleData} - The data to instantiate the PackedCircle with
+	 */
+	constructor({ id, radius, x, y, isPulledToCenter, isPinned }) {
 		x = x || 0;
 		y = y || 0;
 
-		this.id = id;                      
+		/** @type {CircleID} */
+		this.id = id;
 
-		// Where we would like to be
-		this.targetPosition = new Vector( 0, 0 );
-		// Where we really are
-		this.position = new Vector( x, y );
-		this.previousPosition = new Vector( x, y );
+		/**
+		 * Where we would like to be
+		 *
+		 * @type {Vector}
+		 **/
 
-		// For the div stuff  - to avoid superflous movement calls
-	  	this.positionWithOffset = new Vector( x, y );
-		this.previousPositionWithOffset = new Vector( x, y );
+		this.targetPosition = new Vector(0, 0);
 
+		/**
+		 * Where we really are
+		 *
+		 * @type {Vector}
+		 **/
+		this.position = new Vector(x, y);
+
+		/**
+		 * Where we we were last time
+		 *
+		 * @type {Vector}
+		 **/
+		this.previousPosition = new Vector(x, y);
+
+		/**
+		 * Is circle being pulled to center?
+		 *
+		 * @type {boolean}
+		 **/
 		this.isPulledToCenter = isPulledToCenter;
+
+		/**
+		 * Is circle pinned inplace
+		 *
+		 * @type {VectorData}
+		 **/
 		this.isPinned = isPinned;
 
-		// Stored because transform3D is relative
-		this.setRadius( radius );
+		this.setRadius(radius);
 	}
 
-	setPosition ( aPosition ) {
+	/**
+	 * Update the position of the circle
+	 *
+	 * @param {Vector} aPosition - The new position of the circle
+	 */
+	setPosition(aPosition) {
 		this.previousPosition = this.position;
 		this.position = aPosition.cp();
 	}
 
-	distanceSquaredFromTargetPosition () {
-		var distanceSquared = this.position.distanceSquared( this.targetPosition );
-		// if it's shorter than either radi, we intersect
-		return distanceSquared < this.radiusSquared;
-	}
-
-	setRadius ( aRadius ) {
+	/**
+	 * Updates the radius of the circle
+	 *
+	 * @param {number} aRadius - The new radizs
+	 */
+	setRadius(aRadius) {
 		this.radius = aRadius;
 		this.radiusSquared = aRadius * aRadius;
-		this.originalRadius = aRadius;
 	}
 
-	get delta () {
+	/**
+	 * Returns the distance to the last position of the circle
+	 *
+	 * @type {Vector}
+	 */
+	get delta() {
 		return new Vector(
 			this.position.x - this.previousPosition.x,
 			this.position.y - this.previousPosition.y
