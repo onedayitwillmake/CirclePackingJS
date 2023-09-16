@@ -531,6 +531,32 @@ declare module "CirclePacker" {
         destroy(): void;
     }
 }
+type CirclePackerParams = {
+    /**
+     * - The boundaries of the area
+     */
+    bounds: BoundsData;
+    /**
+     * - The circles
+     */
+    circles: PackedCircleData[];
+    /**
+     * - Update the circle positions in a continuous animation loop?
+     */
+    continuousMode?: boolean;
+    /**
+     * - The number of centering passes
+     */
+    centeringPasses?: number;
+    /**
+     * - The number of collistion passes
+     */
+    collisionPasses?: number;
+    /**
+     * - The path to the webworker
+     */
+    workerPath?: string;
+};
 type VectorData = {
     /**
      * - The X component
@@ -632,32 +658,6 @@ type PackedCircleMovementData = {
 type CirclePackerMovementResult = {
     [key: string]: PackedCircleMovementData;
     [key: number]: PackedCircleMovementData;
-};
-type CirclePackerParams = {
-    /**
-     * - The boundaries of the area
-     */
-    bounds: BoundsData;
-    /**
-     * - The circles
-     */
-    circles: PackedCircleData[];
-    /**
-     * - Update the circle positions in a continuous animation loop?
-     */
-    continuousMode?: boolean;
-    /**
-     * - The number of centering passes
-     */
-    centeringPasses?: number;
-    /**
-     * - The number of collistion passes
-     */
-    collisionPasses?: number;
-    /**
-     * - The path to the webworker
-     */
-    workerPath?: string;
 };
 type CircleData = {
     /**

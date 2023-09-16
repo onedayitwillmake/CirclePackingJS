@@ -1,4 +1,5 @@
 import CirclePacker from '../dist/circlepacker.es6.js';
+// import CirclePacker from '../src/CirclePacker.js';
 import { random } from '../src/util.js';
 
 const DRAG_THRESOLD = 10;
@@ -37,6 +38,12 @@ const packer = new CirclePacker({
 	collisionPasses: 3,
 	centeringPasses: 2,
 });
+
+console.log(
+	new CirclePacker({
+		workerPath: '../src/CirclePackWorker.js',
+	})
+);
 
 addButtonEl.addEventListener('click', addRandomCircle);
 deleteButtonEl.addEventListener('click', removeRandomCircle);

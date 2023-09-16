@@ -23,7 +23,9 @@ export default class CirclePacker {
 	 * @param {CirclePackerParams} params - The params to instantiate the CirclePacker with
 	 */
 	constructor(params) {
-		this.worker = new Worker('./CirclePackWorker.js');
+		const workerPath = params.workerPath ? params.workerPath : './CirclePackWorker.js';
+
+		this.worker = new Worker(workerPath, { type: 'module' });
 		this.worker.addEventListener('message', this.receivedWorkerMessage.bind(this));
 
 		this.isContinuousModeActive =
@@ -34,6 +36,11 @@ export default class CirclePacker {
 		this.onMoveEnd = params.onMoveEnd || null;
 
 		this.lastCirclePositions = [];
+
+		this.isLooping = false;
+		this.areItemsMoving = false;
+		this.animationFrameId = NaN;
+		this.initialized = true;
 
 		if (params.centeringPasses) {
 			this.setCenteringPasses(params.centeringPasses);
@@ -46,16 +53,6 @@ export default class CirclePacker {
 		this.addCircles(params.circles || []);
 		this.setBounds(params.bounds || { width: 100, height: 100 });
 		this.setTarget(params.target || { x: 50, y: 50 });
-
-		this.isLooping = false;
-		this.areItemsMoving = true;
-		this.animationFrameId = NaN;
-
-		this.initialized = true;
-
-		if (this.isContinuousModeActive) {
-			this.startLoop();
-		}
 	}
 
 	/**
@@ -125,6 +122,12 @@ export default class CirclePacker {
 		if (circles.length) {
 			if (!circles.every(isCircleValid)) {
 				throw new Error(`Can't add circles: some of the items are not well formatted.`);
+			}
+
+			// in case we just added another circle:
+			// keep going, even if nothing has moved since the last message from the worker
+			if (this.isContinuousModeActive) {
+				this.areItemsMoving = true;
 			}
 
 			this.updateWorker({ type: 'ADD_CIRCLES', circles });
@@ -410,13 +413,6 @@ export default class CirclePacker {
 	startLoop() {
 		if (!this.isLooping && this.initialized && this.isContinuousModeActive) {
 			this.isLooping = true;
-
-			// in case we just added another circle:
-			// keep going, even if nothing has moved since the last message from the worker
-			if (this.isContinuousModeActive) {
-				this.areItemsMoving = true;
-			}
-
 			this.updateListeners({ type: 'MOVE_START' });
 			this.animationFrameId = requestAnimationFrame(() => this.updateLoop());
 		}

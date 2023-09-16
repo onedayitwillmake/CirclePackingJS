@@ -1,4 +1,12 @@
 /**
+ * @typedef {Object} CirclePackerParams
+ * @prop {BoundsData} bounds - The boundaries of the area
+ * @prop {PackedCircleData[]} circles - The circles
+ * @prop {boolean} [continuousMode=true] - Update the circle positions in a continuous animation loop?
+ * @prop {number} [centeringPasses=1] - The number of centering passes
+ * @prop {number} [collisionPasses=3] - The number of collistion passes
+ * @prop {string} [workerPath] - The path to the webworker
+ *
  * @typedef {Object} VectorData
  * @prop {number} x - The X component
  * @prop {number} y - The Y component
@@ -34,14 +42,6 @@
  * @prop {boolean} isPinned - Is the circle pinned
  *
  * @typedef {{[key: CircleID]: PackedCircleMovementData}} CirclePackerMovementResult
- *
- * @typedef {Object} CirclePackerParams
- * @prop {BoundsData} bounds - The boundaries of the area
- * @prop {PackedCircleData[]} circles - The circles
- * @prop {boolean} [continuousMode=true] - Update the circle positions in a continuous animation loop?
- * @prop {number} [centeringPasses=1] - The number of centering passes
- * @prop {number} [collisionPasses=3] - The number of collistion passes
- * @prop {string} [workerPath] - The path to the webworker
  *
  * @typedef {Object} CircleData
  * @prop {CircleID} id - The ID of the circle

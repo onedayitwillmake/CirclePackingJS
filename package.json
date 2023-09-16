@@ -11,7 +11,7 @@
 	],
 	"main": "dist/circlepacker.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
+		"test": "vitest",
 		"build": "npm run build-es6 && npm run build-es5 && npm run build-min && npm run build-min-es5 && npm run generate-types",
 		"build-es6": "node build.mjs",
 		"build-es5": "node build.mjs -e",
@@ -29,12 +29,16 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@rollup/plugin-terser": "^0.4.3",
+		"@vitest/browser": "^0.33.0",
+		"@vitest/web-worker": "^0.33.0",
 		"commander": "^11.0.0",
 		"rollup": "^3.26.3",
 		"rollup-plugin-buble": "^0.19.8",
 		"rollup-plugin-cleanup": "^3.2.1",
 		"typescript": "^5.1.6",
-		"uglify-js": "3.17.4"
+		"uglify-js": "3.17.4",
+		"vitest": "^0.33.0",
+		"webdriverio": "^8.13.4"
 	},
 	"bugs": {
 		"url": "https://github.com/snorpey/circlepacker/issues"

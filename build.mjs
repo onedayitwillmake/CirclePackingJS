@@ -110,31 +110,14 @@ ${jsFileContent}`;
 }
 
 async function handleWorkers(fileContent, buildData) {
-	const workerPathRegex = /new Worker\(['"]([a-zA-Z\d\/.]*)['"]\)/gm;
+	const workerInstantiation = `new Worker(workerPath, { type: 'module' })`;
+	const workerFilePath = resolvePath(buildData.srcPath, 'CirclePackWorker.js');
 
-	let match;
-	let workerMatches = [];
+	// TODO: REMOVE COMMENTS?
+	const workerCode = await bundleJsFile(workerFilePath, buildData, true);
+	const workerFileContent = fileToBlobURL(workerCode);
 
-	while ((match = workerPathRegex.exec(fileContent)) !== null) {
-		if (match.index === workerPathRegex.lastIndex) {
-			workerPathRegex.lastIndex++;
-		}
-
-		workerMatches.push({ workerInstantiation: match[0], workerPath: match[1] });
-	}
-
-	await Promise.all(
-		workerMatches.map(async workerMatch => {
-			const workerFilePath = resolvePath(buildData.srcPath, workerMatch.workerPath);
-			const workerCode = await bundleJsFile(workerFilePath, buildData, true);
-			const workerFileContent = fileToBlobURL(workerCode);
-
-			fileContent = fileContent.replace(
-				workerMatch.workerInstantiation,
-				`new Worker(${workerFileContent})`
-			);
-		})
-	);
+	fileContent = fileContent.replace(workerInstantiation, `new Worker(${workerFileContent})`);
 
 	return fileContent;
 }
