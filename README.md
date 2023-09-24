@@ -5,7 +5,7 @@
 -   [circlepacker.min.js](https://raw.githubusercontent.com/snorpey/circlepacker/master/dist/circlepacker.min.js) 23kb (6kb gzipped)
 -   [circlepacker.js](https://raw.githubusercontent.com/snorpey/circlepacker/master/dist/circlepacker.js) 72kb (13kb gzipped)
 -   [circlepacker.esm.js](https://raw.githubusercontent.com/snorpey/circlepacker/master/dist/circlepacker.esm.js) 69kb (13kb gzipped)
--   [circlepacker.es6.min.js](https://raw.githubusercontent.com/snorpey/circlepacker/master/dist/circlepacker.es6.min.js) 23kb (6kb gzipped)
+-   [circlepacker.esm.min.js](https://raw.githubusercontent.com/snorpey/circlepacker/master/dist/circlepacker.esm.min.js) 23kb (6kb gzipped)
 
 `npm install circlepacker`
 
