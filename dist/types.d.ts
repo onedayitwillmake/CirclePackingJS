@@ -568,7 +568,6 @@ declare module "CirclePacker" {
      * This class passes messages to the worker and notifies subscribers
      */
     export class CirclePacker extends CirclePackerBrowser {
-        id: string;
         useWorker: boolean;
         worker: Worker;
         workerLogic: WorkerLogic;

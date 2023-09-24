@@ -1274,8 +1274,6 @@ class CirclePacker {
 	 * @param {CirclePackerParams} params - The params to instantiate the CirclePacker with
 	 */
 	constructor(params = {}) {
-		
-		this.id = 'PACKA' + Date.now() + Math.round(Math.random() * 100000);
 
 		{
 			this.workerLogic = new WorkerLogic();

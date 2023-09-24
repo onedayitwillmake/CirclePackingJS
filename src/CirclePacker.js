@@ -3,7 +3,6 @@ import {
 	processWorkerResponse,
 	isCircleValid,
 	isBoundsValid,
-	random,
 	isIdValid,
 	isNumberGreaterThan,
 	isPointValid,
@@ -24,7 +23,6 @@ export class CirclePacker extends CirclePackerBrowser {
 	 */
 	constructor(params = {}) {
 		super(params);
-		this.id = 'PACKA' + Date.now() + Math.round(Math.random() * 100000);
 
 		this.useWorker = params.useWorker === false ? false : true;
 
