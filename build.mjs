@@ -3,7 +3,6 @@ import { F_OK } from 'fs';
 import { join as joinPath, resolve as resolvePath, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { rollup } from 'rollup';
-import buble from 'rollup-plugin-buble';
 import { program } from 'commander';
 import terser from '@rollup/plugin-terser';
 import cleanup from 'rollup-plugin-cleanup';
