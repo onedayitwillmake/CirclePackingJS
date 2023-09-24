@@ -1,4 +1,4 @@
-[*.{css,scss,less,mjs,js,json,ts,sass,html,hbs,mustache,phtml,html.twig,md,yml}]
+[*.{css,mjs,js,json,ts,html,md}]
 charset = utf-8
 indent_style = tab
 indent_size = 4
@@ -16,3 +16,7 @@ trim_trailing_whitespace = false
 [package.json,.{babelrc,editorconfig,eslintrc,lintstagedrc,stylelintrc}]
 indent_style = tab
 indent_size = 4
+
+[.github/**/*.{yml}]
+indent_style = space
+indent_size = 2
