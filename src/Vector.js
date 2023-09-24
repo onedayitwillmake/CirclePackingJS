@@ -5,7 +5,7 @@
  * https://github.com/onedayitwillmake/CirclePackingJS/blob/eb3475b/js-module/web/js/lib/Vector.js
  *
  */
-export default class Vector {
+export class Vector {
 	/**
 	 * Creates an instance of Vector.
 	 *

@@ -1,4 +1,5 @@
-import { readFile, writeFile } from 'fs/promises';
+import { readFile, writeFile, access, unlink } from 'fs/promises';
+import { F_OK } from 'fs';
 import { join as joinPath, resolve as resolvePath, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { rollup } from 'rollup';
@@ -6,9 +7,12 @@ import buble from 'rollup-plugin-buble';
 import { program } from 'commander';
 import terser from '@rollup/plugin-terser';
 import cleanup from 'rollup-plugin-cleanup';
+import replace from '@rollup/plugin-replace';
 
 program
-	.option('-e, --es5', 'make output files es5 compatible')
+	.option('-u, --umd', 'create umd export')
+	.option('-n, --nodemjs', 'generate node module (mjs)')
+	.option('-c, --commonjs', 'generate commonjs module')
 	.option('-m, --minify', 'minify output')
 	.parse(process.argv);
 
@@ -22,7 +26,9 @@ const buildData = await prepareBuildData({
 	srcPath: joinPath(basePath, 'src'),
 	distPath: joinPath(basePath, 'dist'),
 	minify: !!options.minify,
-	es5: !!options.es5,
+	umd: !!options.umd,
+	nodemjs: !!options.nodemjs,
+	commonjs: !!options.commonjs,
 	date: new Date(),
 	jsModuleName: 'CirclePacker',
 });
@@ -35,19 +41,34 @@ await Promise.all(
 		const jsFileContent = await bundleJsFile(scriptFilePath, buildData);
 
 		const fileSuffixes = [];
+		let extension = 'js';
 
-		if (!buildData.es5) {
-			fileSuffixes.push('es6');
+		if (!buildData.umd && !buildData.nodemjs && !buildData.commonjs) {
+			fileSuffixes.push('esm');
 		}
 
 		if (buildData.minify) {
 			fileSuffixes.push('min');
 		}
 
-		const fileParts = [buildData.jsModuleName, ...fileSuffixes, 'js'];
+		if (buildData.nodemjs) {
+			fileSuffixes.push('node');
+			extension = 'mjs';
+		}
 
-		const distFileName = fileParts.join('.');
+		if (buildData.commonjs) {
+			fileSuffixes.push('cjs');
+		}
+
+		const fileParts = [buildData.jsModuleName, ...fileSuffixes, extension];
+
+		const distFileName = fileParts.join('.').toLowerCase();
 		const distFilePath = joinPath(buildData.distPath, distFileName);
+
+		try {
+			await access(distFilePath, F_OK);
+			await unlink(distFilePath);
+		} catch (e) {}
 
 		return writeFile(distFilePath, jsFileContent);
 	})
@@ -56,10 +77,32 @@ await Promise.all(
 async function bundleJsFile(filePath, buildData, isWorker) {
 	const rollupPlugins = [];
 
-	if (buildData.es5) {
-		rollupPlugins.push(buble());
-	} else {
+	const replacements = {};
+	replacements[
+		`const workerPath = params.workerPath ? params.workerPath : './CirclePackWorker.js';`
+	] = '';
+
+	if (buildData.nodemjs || buildData.commonjs) {
+		replacements['this.useWorker = params.useWorker === false ? false : true'] = '';
+		replacements[`if (this.useWorker) {`] = 'if (false) {';
+		replacements[` extends CirclePackerBrowser`] = '';
+		replacements[`super(params);`] = '';
+		replacements[`if (!this.isContinuousModeActive) {`] = 'if (true) {';
+		replacements[`super.handleWorkerResponse(response);`] = '';
+		replacements[`super.updateListeners(response);`] = '';
+		replacements[`super.forceMovement();`] = '';
+		replacements[`super.startLoop();`] = '';
+		replacements[`super.destroy();`] = '';
 	}
+
+	if (buildData.umd) {
+		replacements[`export class CirclePacker `] = 'export default class CirclePacker ';
+		replacements[`export function pack`] = 'function pack ';
+	}
+
+	rollupPlugins.push(
+		replace({ preventAssignment: false, values: replacements, delimiters: ['', ''] })
+	);
 
 	if (buildData.minify) {
 		rollupPlugins.push(terser());
@@ -75,27 +118,40 @@ async function bundleJsFile(filePath, buildData, isWorker) {
 	};
 
 	const rollupBundle = await rollup(rollupOptions);
-	const generationOptions = buildData.es5
-		? {
-				format: 'umd',
-				name: buildData.jsModuleName,
-		  }
-		: {
-				format: 'module',
-				name: buildData.jsModuleName,
-		  };
+
+	let generationOptions = {
+		format: 'module',
+		name: buildData.jsModuleName,
+	};
+
+	if (buildData.umd || buildData.commonjs) {
+		generationOptions = {
+			format: 'umd',
+			name: buildData.jsModuleName,
+		};
+	}
 
 	const bundleResult = await rollupBundle.generate(generationOptions);
+
 	let jsFileContent = bundleResult.output[0].code;
 
-	if (jsFileContent.includes('new Worker')) {
+	if (!isWorker && jsFileContent.includes('new Worker')) {
 		jsFileContent = await handleWorkers(jsFileContent, buildData);
 	}
 
 	if (!isWorker && !buildData.minify) {
-		const typeCommentsFile = await loadFile(joinPath(buildData.srcPath, 'types.js'));
+		let typeCommentsFile = await loadFile(joinPath(buildData.srcPath, 'types.js'));
 
-		jsFileContent = `${typeCommentsFile.fileContent}
+		let typeComments = typeCommentsFile.fileContent.replace(/^.*\[workerPath\].*$\n/gm, '');
+
+		if (buildData.nodemjs || buildData.commonjs) {
+			typeComments = typeComments.replace(/^.*\[continuousMode=true\].*$\n/gm, '');
+			typeComments = typeComments.replace(/^.*\[useWorker=true\].*$\n/gm, '');
+			typeComments = typeComments.replace(/^.*\[onMoveStart\].*$\n/gm, '');
+			typeComments = typeComments.replace(/^.*\[onMoveEnd\].*$\n/gm, '');
+		}
+
+		jsFileContent = `${typeComments}
 ${jsFileContent}`;
 	}
 
@@ -110,10 +166,10 @@ ${jsFileContent}`;
 }
 
 async function handleWorkers(fileContent, buildData) {
-	const workerInstantiation = `new Worker(workerPath, { type: 'module' })`;
+	const workerInstantiation =
+		/new Worker\([a-zA-Z]+\s*,\s*{\s*type\s*:\s*['"]\s*module\s*['"]\s*}\s*\)/gm;
 	const workerFilePath = resolvePath(buildData.srcPath, 'CirclePackWorker.js');
 
-	// TODO: REMOVE COMMENTS?
 	const workerCode = await bundleJsFile(workerFilePath, buildData, true);
 	const workerFileContent = fileToBlobURL(workerCode);
 

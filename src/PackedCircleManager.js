@@ -3,13 +3,13 @@
 // by @onedayitwillmake / Mario Gonzalez with some changes by @snorpey
 
 import PackedCircle from './PackedCircle.js';
-import Vector from './Vector.js';
+import { Vector } from './Vector.js';
+import { boundsDataToRect } from './util.js';
 
 /**
  * The PackedCircleManager handles updating the state. It runs in a web worker
- *
  */
-export default class PackedCircleManager {
+export class PackedCircleManager {
 	/**
 	 * Creates an instance of PackedCircleManager.
 	 *
@@ -23,57 +23,67 @@ export default class PackedCircleManager {
 		this.pinnedCircleIds = [];
 
 		/** @type {Vector | undefined} */
-		this.desiredTarget = new Vector(0, 0);
+		this.desiredTarget = undefined;
 
-		/** @type {BoundsData} */
-		this.bounds = { left: 0, top: 0, right: 0, bottom: 0 };
+		/** @type {BoundsRect | undefined} */
+		this.boundsRect = undefined;
 
 		/** @type {number} */
 		this.damping = 0.025;
 
-		// Number of passes for the centering and collision
-		// algorithms - it's (O)logN^2 so use increase at your own risk!
-		// Play with these numbers - see what works best for your project
+		/**
+		 * Should all items be pulled to the target?
+		 *
+		 * @type {boolean}
+		 * */
+		this.isTargetPullActive = true;
 
-		/** @type {number} */
+		/**
+		 * Do we want to calculate overlapping circles for each update?
+		 * It might be an expensive operation and is not always needed
+		 *
+		 * @type {boolean}
+		 * */
+		this.calculateOverlap = false;
+
+		/**
+		 * Number of passes for centering
+		 * It's (O)logN^2 so use increase at your own risk!
+		 * Play with these numbers - see what works best for your project
+		 *
+		 * @type {number}
+		 * */
 		this.numberOfCenteringPasses = 1;
 
-		/** @type {number} */
+		/**
+		 * Number of passes for collision
+		 * It's (O)logN^2 so use increase at your own risk!
+		 * Play with these numbers - see what works best for your project
+		 *
+		 * @type {number}
+		 * */
 		this.numberOfCollisionPasses = 3;
 
-		/** @type {boolean} */
-		this.isCenterPullActive = true;
+		/**
+		 * Number of passes for correcting overlapping circles
+		 * This is can be a very expensive operation so increase at your own risk!
+		 * Play with these numbers - see what works best for your project
+		 *
+		 * @type {number}
+		 * */
+		this.numberOfCorrectionPasses = 0;
 	}
 
 	/**
 	 * Set the boundary rectangle for the circle packing.
-	 * This is used to locate the 'center'
 	 *
 	 * @param {BoundsData} aBoundaryObject - The boundary to set
 	 */
 	setBounds(aBoundaryObject) {
-		if (typeof aBoundaryObject.left === 'number') {
-			this.bounds.left = aBoundaryObject.left;
-		}
+		const newBoundsRect = boundsDataToRect(aBoundaryObject);
 
-		if (typeof aBoundaryObject.right === 'number') {
-			this.bounds.right = aBoundaryObject.right;
-		}
-
-		if (typeof aBoundaryObject.top === 'number') {
-			this.bounds.top = aBoundaryObject.top;
-		}
-
-		if (typeof aBoundaryObject.bottom === 'number') {
-			this.bounds.bottom = aBoundaryObject.bottom;
-		}
-
-		if (typeof aBoundaryObject.width === 'number') {
-			this.bounds.right = this.bounds.left + aBoundaryObject.width;
-		}
-
-		if (typeof aBoundaryObject.height === 'number') {
-			this.bounds.bottom = this.bounds.top + aBoundaryObject.height;
+		if (newBoundsRect) {
+			this.boundsRect = newBoundsRect;
 		}
 	}
 
@@ -90,13 +100,16 @@ export default class PackedCircleManager {
 				x: aCircle.position.x || 0,
 				y: aCircle.position.y || 0,
 				isPinned: aCircle.isPinned || false,
-				isPulledToCenter:
-					typeof aCircle.isPulledToCenter === 'boolean' ? aCircle.isPulledToCenter : true,
+				isPulledToTarget:
+					typeof aCircle.isPulledToTarget === 'boolean' ? aCircle.isPulledToTarget : true,
 			});
 		}
 
 		this.allCircles.push(aCircle);
-		aCircle.targetPosition = this.desiredTarget.cp();
+
+		if (this.desiredTarget) {
+			aCircle.targetPosition = this.desiredTarget.cp();
+		}
 	}
 
 	/**
@@ -105,7 +118,6 @@ export default class PackedCircleManager {
 	 * @param {CircleID} circleToRemoveId - Id of the circle to remove
 	 */
 	removeCircle(circleToRemoveId) {
-		const circlesToRemove = this.allCircles.filter(circle => circle.id === circleToRemoveId);
 		this.allCircles = this.allCircles.filter(circle => circle.id !== circleToRemoveId);
 	}
 
@@ -123,7 +135,7 @@ export default class PackedCircleManager {
 			circle.previousPosition = circle.position.cp();
 		}
 
-		if (this.desiredTarget && this.isCenterPullActive) {
+		if (this.desiredTarget && this.isTargetPullActive) {
 			// Push all the circles to the target - in my case the center of the bounds
 			this.pushAllCirclesTowardTarget(this.desiredTarget);
 		}
@@ -131,11 +143,29 @@ export default class PackedCircleManager {
 		// Make the circles collide and adjust positions to move away from each other
 		this.handleCollisions();
 
-		// store information about the previous position
-		for (let i = 0; i < circleCount; ++i) {
-			const circle = circleList[i];
+		// Collide all circles with bounds (if possible)
+		if (this.boundsRect) {
+			this.handleBoundaryCollisions();
 
-			this.handleBoundaryForCircle(circle);
+			// console.log();
+
+			// In case any circles are overlapping after colliding with the bounds,
+			// run the collisions a few more times.
+			if (this.numberOfCorrectionPasses > 0) {
+				let overlapCorrectionTries = 0;
+				let overlappingCirclesCount = Object.keys(this.getOverlappingCircles()).length;
+
+				while (
+					overlappingCirclesCount > 0 &&
+					overlapCorrectionTries < this.numberOfCorrectionPasses
+				) {
+					this.handleCollisions();
+					this.handleBoundaryCollisions();
+
+					overlappingCirclesCount = Object.keys(this.getOverlappingCircles()).length;
+					overlapCorrectionTries += 1;
+				}
+			}
 		}
 	}
 
@@ -159,7 +189,7 @@ export default class PackedCircleManager {
 			for (let circleIndex = 0; circleIndex < circleCount; circleIndex++) {
 				const circle = circleList[circleIndex];
 
-				if (circle.isPulledToCenter) {
+				if (circle.isPulledToTarget) {
 					// Kinematic circles can't be pushed around.
 					const isCircleKinematic =
 						circle === dragCircle || this.isCirclePinned(circle.id);
@@ -197,15 +227,14 @@ export default class PackedCircleManager {
 			collisionPassNumber++
 		) {
 			for (let circleAIndex = 0; circleAIndex < circleCount; circleAIndex++) {
-				var circleA = circleList[circleAIndex];
+				const circleA = circleList[circleAIndex];
 
 				for (
 					let circleBIndex = circleAIndex + 1;
 					circleBIndex < circleCount;
 					circleBIndex++
 				) {
-					var circleB = circleList[circleBIndex];
-
+					const circleB = circleList[circleBIndex];
 					const isCircleAPinned = this.isCirclePinned(circleA.id);
 					const isCircleBPinned = this.isCirclePinned(circleB.id);
 
@@ -266,37 +295,110 @@ export default class PackedCircleManager {
 	}
 
 	/**
+	 * Collide circles with boundaries
+	 */
+	handleBoundaryCollisions() {
+		if (this.boundsRect) {
+			this.allCircles.forEach(circle => {
+				this.handleBoundaryForCircle(circle);
+			});
+		}
+	}
+
+	/**
 	 * Ensure the circle stays inside the boundaries
 	 *
 	 * @param {PackedCircle} aCircle - The circle to check
 	 */
 	handleBoundaryForCircle(aCircle) {
-		const x = aCircle.position.x;
-		const y = aCircle.position.y;
+		const { x, y } = aCircle.position;
 		const radius = aCircle.radius;
 
 		let isOverEdge = false;
 
-		if (x + radius >= this.bounds.right) {
-			aCircle.position.x = this.bounds.right - radius;
-			isOverEdge = true;
-		} else if (x - radius < this.bounds.left) {
-			aCircle.position.x = this.bounds.left + radius;
-			isOverEdge = true;
-		}
+		if (this.boundsRect) {
+			if (x + radius >= this.boundsRect.right) {
+				aCircle.position.x = this.boundsRect.right - radius;
+				isOverEdge = true;
+			} else if (x - radius < this.boundsRect.left) {
+				aCircle.position.x = this.boundsRect.left + radius;
+				isOverEdge = true;
+			}
 
-		if (y + radius > this.bounds.bottom) {
-			aCircle.position.y = this.bounds.bottom - radius;
-			isOverEdge = true;
-		} else if (y - radius < this.bounds.top) {
-			aCircle.position.y = this.bounds.top + radius;
-			isOverEdge = true;
-		}
+			if (y + radius > this.boundsRect.bottom) {
+				aCircle.position.y = this.boundsRect.bottom - radius;
+				isOverEdge = true;
+			} else if (y - radius < this.boundsRect.top) {
+				aCircle.position.y = this.boundsRect.top + radius;
+				isOverEdge = true;
+			}
 
-		// end dragging if user dragged over edge
-		if (isOverEdge && aCircle === this.draggedCircle) {
-			this.draggedCircle = null;
+			// end dragging if user dragged over edge
+			if (isOverEdge && aCircle === this.draggedCircle) {
+				this.draggedCircle = null;
+			}
 		}
+	}
+
+	/**
+	 * Calculate overlapping circles for each circle
+	 *
+	 * @returns {CirclePackerOverlappingCircles}
+	 */
+	getOverlappingCircles() {
+		/** @type {CirclePackerOverlappingCircles} */
+		const overlappingCircles = {};
+
+		this.allCircles.forEach(circleA => {
+			const overlappingCirclesForCircle = this.allCircles
+				.filter(circleB => circleA.id !== circleB.id)
+				.map(circleB => {
+					const distanceBetweenCirclePositions = new Vector(circleA.position).distance(
+						circleB.position
+					);
+
+					const isOverlapping =
+						distanceBetweenCirclePositions < circleA.radius + circleB.radius;
+
+					const overlapDistance = isOverlapping
+						? circleA.radius + circleB.radius - distanceBetweenCirclePositions
+						: 0;
+
+					return { overlappingCircleId: circleB.id, overlapDistance };
+				})
+				.filter(overlapData => {
+					return overlapData.overlapDistance > 0;
+				});
+
+			if (overlappingCirclesForCircle.length) {
+				overlappingCircles[circleA.id] = overlappingCirclesForCircle;
+			}
+		});
+
+		return overlappingCircles;
+	}
+
+	/**
+	 * Create a positions object that we can send via postmessage
+	 *
+	 * @returns {CirclePackerMovementResult}
+	 */
+	getPositions() {
+		const positions = this.allCircles.reduce((result, circle) => {
+			result[circle.id] = {
+				id: circle.id,
+				position: circle.position,
+				previousPosition: circle.previousPosition,
+				radius: circle.radius,
+				delta: circle.delta,
+				isPulledToTarget: circle.isPulledToTarget,
+				isPinned: circle.isPinned,
+			};
+
+			return result;
+		}, {});
+
+		return positions;
 	}
 
 	/**
@@ -404,26 +506,26 @@ export default class PackedCircleManager {
 	}
 
 	/**
-	 * Update the centerPull value of a circle
+	 * Update the targetPull value of a circle
 	 *
 	 * @param {CircleID} id - The id of the circle
-	 * @param {boolean} centerPull - The centerPull value
+	 * @param {boolean} targetPull - The targetPull value
 	 */
-	setCircleCenterPull(id, centerPull) {
+	setCircleTargetPull(id, targetPull) {
 		const circle = this.circleById(id);
 
 		if (circle) {
-			circle.isPulledToCenter = centerPull;
+			circle.isPulledToTarget = targetPull;
 		}
 	}
 
 	/**
-	 * Set a global centerPull value
+	 * Set a global targetPull value
 	 *
-	 * @param {boolean} centerPull - The global canterPull value
+	 * @param {boolean} targetPull - The global canterPull value
 	 */
-	setCenterPull(centerPull) {
-		this.isCenterPullActive = centerPull;
+	setTargetPull(targetPull) {
+		this.isTargetPullActive = targetPull;
 	}
 
 	/**
@@ -438,9 +540,19 @@ export default class PackedCircleManager {
 
 	/**
 	 * Sets the target position where the circles want to be
-	 * @param {VectorData} aPosition - The position of the centerPull target
+	 *
+	 * @param {VectorData} aPosition - The position of the targetPull target
 	 */
 	setTarget(aPosition) {
 		this.desiredTarget = aPosition;
+	}
+
+	/**
+	 * Sets calculate overlap
+	 *
+	 * @param {boolean} calculateOverlap
+	 */
+	setCalculateOverlap(calculateOverlap) {
+		this.calculateOverlap = calculateOverlap;
 	}
 }

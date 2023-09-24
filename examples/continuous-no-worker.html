@@ -12,7 +12,7 @@
 		<h1>continuous drawing</h1>
 		<p>the circle positions are continuously updated. you can use the buttons below to update the circles and
 			restart the animation. you can also drag circles around.</p>
-		<p>this example uses the es module version of the circlepacker script.</p>
+		<p>it also shows how to calculate the results on the main thread, without a web worker.</p>
 		<p><a href="index.html">back to index</a></p>
 	</article>
 	<div class="container container--is-interactive"></div>
@@ -29,7 +29,7 @@
 		<span id="damping-value">0.025</span>
 	</div>
 	<script type="module">
-		import { CirclePacker } from '../dist/circlepacker.esm.min.js';
+		import { CirclePacker } from '../src/CirclePacker.js';
 
 		const DRAG_THRESOLD = 10;
 
@@ -71,6 +71,7 @@
 			collisionPasses: 3,
 			centeringPasses: 2,
 			correctionPasses: 5,
+			useWorker: false,
 		});
 
 		addButtonEl.addEventListener('click', addRandomCircle);
@@ -205,7 +206,7 @@
 			packer.setDamping(damping);
 		}
 
-		function render(circles, target) {
+		function render(circles) {
 			requestAnimationFrame(function () {
 				for (let id in circles) {
 					const circleEl = circleEls[id];

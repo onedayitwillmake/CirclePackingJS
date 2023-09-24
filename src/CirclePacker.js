@@ -1,46 +1,57 @@
-// import * as types from './types.js';
 import {
 	sendWorkerMessage,
-	processWorkerMessage,
+	processWorkerResponse,
 	isCircleValid,
 	isBoundsValid,
 	random,
 	isIdValid,
 	isNumberGreaterThan,
 	isPointValid,
-	isNumberBetween,
 } from './util.js';
 
+import { WorkerLogic } from './WorkerLogic.js';
+import { CirclePackerBrowser } from './CirclePackerBrowser.js';
+
 /**
- * This class keeps track of the drawing loop in continuous drawing mode
- * and passes messages to the worker
+ * This class passes messages to the worker and notifies subscribers
  */
-export default class CirclePacker {
+export class CirclePacker extends CirclePackerBrowser {
 	/**
 	 * Creates an instance of CirclePacker.
 	 *
 	 * @constructor
 	 * @param {CirclePackerParams} params - The params to instantiate the CirclePacker with
 	 */
-	constructor(params) {
-		const workerPath = params.workerPath ? params.workerPath : './CirclePackWorker.js';
+	constructor(params = {}) {
+		super(params);
+		this.id = 'PACKA' + Date.now() + Math.round(Math.random() * 100000);
 
-		this.worker = new Worker(workerPath, { type: 'module' });
-		this.worker.addEventListener('message', this.receivedWorkerMessage.bind(this));
+		this.useWorker = params.useWorker === false ? false : true;
 
-		this.isContinuousModeActive =
-			typeof params.continuousMode === 'boolean' ? params.continuousMode : true;
+		if (this.useWorker) {
+			if (!Worker) {
+				throw new Error('Web workers are not supported.');
+			}
 
-		this.onMoveStart = params.onMoveStart || null;
+			const workerPath = params.workerPath ? params.workerPath : './CirclePackWorker.js';
+
+			this.worker = new Worker(workerPath, { type: 'module' });
+			this.worker.addEventListener('message', this.receivedWorkerMessage.bind(this));
+		} else {
+			this.workerLogic = new WorkerLogic();
+		}
+
+		/**
+		 * The onMove callback function. Called whenever the circle positions have changed
+		 * @type {OnMoveCallback}
+		 */
 		this.onMove = params.onMove || null;
-		this.onMoveEnd = params.onMoveEnd || null;
 
-		this.lastCirclePositions = [];
-
-		this.isLooping = false;
-		this.areItemsMoving = false;
-		this.animationFrameId = NaN;
-		this.initialized = true;
+		/**
+		 * Stores the circle positions from last update
+		 * @type {CirclePackerMovementResult}
+		 */
+		this.lastCirclePositions = {};
 
 		if (params.centeringPasses) {
 			this.setCenteringPasses(params.centeringPasses);
@@ -50,9 +61,29 @@ export default class CirclePacker {
 			this.setCollisionPasses(params.collisionPasses);
 		}
 
-		this.addCircles(params.circles || []);
-		this.setBounds(params.bounds || { width: 100, height: 100 });
-		this.setTarget(params.target || { x: 50, y: 50 });
+		if (params.correctionPasses) {
+			this.setCorrectionPasses(params.correctionPasses);
+		}
+
+		if (typeof params.calculateOverlap === 'boolean') {
+			this.setCalculateOverlap(params.calculateOverlap);
+		}
+
+		if (params.bounds) {
+			this.setBounds(params.bounds);
+		}
+
+		if (params.target) {
+			this.setTarget(params.target);
+		}
+
+		if (params.circles && params.circles.length) {
+			this.addCircles(params.circles);
+		}
+
+		if (!this.isContinuousModeActive) {
+			this.update();
+		}
 	}
 
 	/**
@@ -61,24 +92,12 @@ export default class CirclePacker {
 	 * @param {MessageEvent<string>} event
 	 */
 	receivedWorkerMessage(event) {
-		const response = processWorkerMessage(event);
+		const response = processWorkerResponse(event);
 
-		if (response.type === 'MOVED') {
-			const movedCircles = response.updatedCircles;
-
-			this.areItemsMoving = this.hasItemMoved(movedCircles);
-
-			if (
-				!this.areItemsMoving &&
-				this.isLooping &&
-				this.initialized &&
-				this.isContinuousModeActive
-			) {
-				this.stopLoop();
-			}
+		if (response) {
+			super.handleWorkerResponse(response);
+			this.updateListeners(response);
 		}
-
-		this.updateListeners(response);
 	}
 
 	/**
@@ -87,7 +106,17 @@ export default class CirclePacker {
 	 * @param {WorkerAction} action
 	 */
 	updateWorker(action) {
-		sendWorkerMessage(this.worker, { messageId: Date.now() + random(0, 0.001, true), action });
+		const workerMessage = { messageId: Date.now(), action };
+
+		if (this.useWorker) {
+			sendWorkerMessage(this.worker, workerMessage);
+		} else {
+			// If no worker is used, we get the result directly via callback
+			this.workerLogic.handleWorkerMessage(workerMessage, response => {
+				super.handleWorkerResponse(response);
+				this.updateListeners(response);
+			});
+		}
 	}
 
 	/**
@@ -96,15 +125,15 @@ export default class CirclePacker {
 	 * @param {WorkerResponse} response
 	 */
 	updateListeners(response) {
-		if (response.type === 'MOVE_START' && typeof this.onMoveStart === 'function') {
-			this.onMoveStart();
-		}
 		if (response.type === 'MOVED' && typeof this.onMove === 'function') {
 			this.lastCirclePositions = response.updatedCircles;
-			this.onMove(response.updatedCircles);
+			this.onMove(response.updatedCircles, response.target, response.overlappingCircles);
 		}
-		if (response.type === 'MOVE_END' && typeof this.onMoveEnd === 'function') {
-			this.onMoveEnd(response.updatedCircles);
+
+		super.updateListeners(response);
+
+		if (!this.isContinuousModeActive) {
+			this.destroy();
 		}
 	}
 
@@ -124,14 +153,9 @@ export default class CirclePacker {
 				throw new Error(`Can't add circles: some of the items are not well formatted.`);
 			}
 
-			// in case we just added another circle:
-			// keep going, even if nothing has moved since the last message from the worker
-			if (this.isContinuousModeActive) {
-				this.areItemsMoving = true;
-			}
-
 			this.updateWorker({ type: 'ADD_CIRCLES', circles });
-			this.startLoop();
+			super.forceMovement();
+			super.startLoop();
 		}
 	}
 
@@ -158,7 +182,7 @@ export default class CirclePacker {
 			throw new Error(`Can't remove circle: the circleRef parameter is malformed.`);
 		} else {
 			this.updateWorker({ type: 'REMOVE_CIRCLE', id: circleId });
-			this.startLoop();
+			super.startLoop();
 		}
 	}
 
@@ -176,7 +200,7 @@ export default class CirclePacker {
 			throw new Error(`Can't pin circle: the circleRef parameter is malformed.`);
 		} else {
 			this.updateWorker({ type: 'PIN_CIRCLE', id: circleId });
-			this.startLoop();
+			super.startLoop();
 		}
 	}
 
@@ -194,7 +218,7 @@ export default class CirclePacker {
 			throw new Error(`Can't unpin circle: the circleRef parameter is malformed.`);
 		} else {
 			this.updateWorker({ type: 'UNPIN_CIRCLE', id: circleId });
-			this.startLoop();
+			super.startLoop();
 		}
 	}
 
@@ -215,17 +239,17 @@ export default class CirclePacker {
 			throw new Error(`Can't set circle radius: the passed radius is malformed.`);
 		} else {
 			this.updateWorker({ type: 'SET_CIRCLE_RADIUS', id: circleId, radius });
-			this.startLoop();
+			super.startLoop();
 		}
 	}
 
 	/**
-	 * Set centerPull value of a Circle
+	 * Set targetPull value of a Circle
 	 *
 	 * @param {CircleRef} circleRef - The circle
-	 * @param {boolean} centerPull - The new centerPull value
+	 * @param {boolean} targetPull - The new targetPull value
 	 */
-	setCircleCenterPull(circleRef, centerPull) {
+	setCircleTargetPull(circleRef, targetPull) {
 		const circleId =
 			typeof circleRef === 'object' && circleRef.id !== undefined ? circleRef.id : circleRef;
 
@@ -233,23 +257,23 @@ export default class CirclePacker {
 			throw new Error(`Can't set circle center pull: the circleRef parameter is malformed.`);
 		} else {
 			this.updateWorker({
-				type: 'SET_CIRCLE_CENTER_PULL',
+				type: 'SET_CIRCLE_TARGET_PULL',
 				id: circleId,
-				centerPull: !!centerPull,
+				targetPull: !!targetPull,
 			});
 
-			this.startLoop();
+			super.startLoop();
 		}
 	}
 
 	/**
 	 * Set global center pull value
 	 *
-	 * @param {boolean} centerPull - The new centerPull value
+	 * @param {boolean} targetPull - The new targetPull value
 	 */
-	setCenterPull(centerPull) {
-		this.updateWorker({ type: 'SET_CENTER_PULL', centerPull: !!centerPull });
-		this.startLoop();
+	setTargetPull(targetPull) {
+		this.updateWorker({ type: 'SET_TARGET_PULL', targetPull: !!targetPull });
+		super.startLoop();
 	}
 
 	/**
@@ -263,7 +287,7 @@ export default class CirclePacker {
 			throw new Error(`Can't set bounds: the bounds parameter is malformed.`);
 		} else {
 			this.updateWorker({ type: 'SET_BOUNDS', bounds });
-			this.startLoop();
+			super.startLoop();
 		}
 	}
 
@@ -278,12 +302,16 @@ export default class CirclePacker {
 			throw new Error(`Can't set target: the targetPos parameter is malformed.`);
 		} else {
 			this.updateWorker({ type: 'SET_TARGET', target: targetPos });
-			this.startLoop();
+			super.forceMovement();
+			super.startLoop();
 		}
 	}
 
 	/**
 	 * Updates the number of centering passes
+	 *
+	 * It's (O)logN^2 so use increase at your own risk.
+	 * Play with these numbers - see what works best for your project.
 	 *
 	 * @throws Will throw an error if the number of centering passes is malformed
 	 * @param {number} numberOfCenteringPasses - The new number of centering passes. Expects a number >= 1
@@ -301,6 +329,9 @@ export default class CirclePacker {
 	/**
 	 * Sets the number of collision passes
 	 *
+	 * It's (O)logN^2 so use increase at your own risk.
+	 * Play with these numbers - see what works best for your project.
+	 *
 	 * @throws Will throw an error if the number of collision passes is malformed
 	 * @param {number} numberOfCollisionPasses - Sets the new number of collision passes. Expects a number >= 1
 	 */
@@ -311,6 +342,41 @@ export default class CirclePacker {
 			);
 		} else {
 			this.updateWorker({ type: 'SET_COLLISION_PASSES', numberOfCollisionPasses });
+		}
+	}
+
+	/**
+	 * Sets the number of correction passes
+	 *
+	 * This is can be a very expensive operation so increase at your own risk.
+	 * Play with these numbers - see what works best for your project.
+	 *
+	 * @throws Will throw an error if the number of collision passes is malformed
+	 * @param {number} numberOfCorrectionPasses - Sets the new number of correction passes. Expects a number >= 0
+	 */
+	setCorrectionPasses(numberOfCorrectionPasses) {
+		if (!isNumberGreaterThan(numberOfCorrectionPasses, 0)) {
+			throw new Error(
+				`Can't set CorrectionPasses passes: the numberOfCorrectionPasses parameter is malformed.`
+			);
+		} else {
+			this.updateWorker({ type: 'SET_CORRECTION_PASSES', numberOfCorrectionPasses });
+		}
+	}
+
+	/**
+	 * Should we calculate the overlap on each update?
+	 *
+	 * @throws Will throw an error if calculateOverlap is not boolean
+	 * @param {boolean} calculateOverlap - Sets the calculateOverlap value
+	 */
+	setCalculateOverlap(calculateOverlap) {
+		if (typeof calculateOverlap !== 'boolean') {
+			throw new Error(
+				`Can't set calculateOverlap the calculateOverlap parameter is not a boolean.`
+			);
+		} else {
+			this.updateWorker({ type: 'SET_CALCULATE_OVERLAP', calculateOverlap });
 		}
 	}
 
@@ -349,7 +415,7 @@ export default class CirclePacker {
 			throw new Error(`Can't start dragging circle: the circleRef parameter is malformed.`);
 		} else {
 			this.updateWorker({ type: 'DRAG_START', id: circleId });
-			this.startLoop();
+			super.startLoop();
 		}
 	}
 
@@ -370,7 +436,7 @@ export default class CirclePacker {
 			throw new Error(`Can't drag circle: the position parameter is malformed.`);
 		} else {
 			this.updateWorker({ type: 'DRAG_MOVE', id: circleId, position });
-			this.startLoop();
+			super.startLoop();
 		}
 	}
 
@@ -388,79 +454,57 @@ export default class CirclePacker {
 			throw new Error(`Can't end dragging circle: the circleRef parameter is malformed.`);
 		} else {
 			this.updateWorker({ type: 'DRAG_END', id: circleId });
-			this.startLoop();
+			super.startLoop();
 		}
-	}
-
-	/**
-	 * The update loop that calls itself recursively every animation frame
-	 */
-	updateLoop() {
-		this.update();
-
-		if (this.isLooping) {
-			if (this.areItemsMoving) {
-				this.animationFrameId = requestAnimationFrame(() => this.updateLoop());
-			} else {
-				this.stopLoop();
-			}
-		}
-	}
-
-	/**
-	 * Start the update loop
-	 */
-	startLoop() {
-		if (!this.isLooping && this.initialized && this.isContinuousModeActive) {
-			this.isLooping = true;
-			this.updateListeners({ type: 'MOVE_START' });
-			this.animationFrameId = requestAnimationFrame(() => this.updateLoop());
-		}
-	}
-
-	/**
-	 * Stop the update loop
-	 */
-	stopLoop() {
-		if (this.isLooping) {
-			this.isLooping = false;
-			this.updateListeners({ type: 'MOVE_END', updatedCircles: this.lastCirclePositions });
-			cancelAnimationFrame(this.animationFrameId);
-		}
-	}
-
-	/**
-	 * Check if an item has moved. Count items that have moved barely as not moved
-	 *
-	 * @param {CirclePackerMovementResult} positions
-	 * @returns {boolean}
-	 */
-	hasItemMoved(positions) {
-		let result = false;
-
-		for (let id in positions) {
-			if (
-				Math.abs(positions[id].delta.x) > 0.005 ||
-				Math.abs(positions[id].delta.y) > 0.005
-			) {
-				result = true;
-			}
-		}
-
-		return result;
 	}
 
 	/**
 	 * Tear down worker, remove cllbacks
 	 */
 	destroy() {
+		super.destroy();
+
 		if (this.worker) {
 			this.worker.terminate();
 		}
-		this.stopLoop();
 
 		this.onMove = null;
-		this.onMoveStart = null;
-		this.onMoveEnd = null;
 	}
 }
+
+/**
+ * Pack circles as simple async function. Only works for one-time operations
+ *
+ * @export
+ * @param {PackParams} params - The params for the circlepacker.
+ * @returns {PromiseLike<PackResponse>}
+ */
+export function pack(params = {}) {
+	return new Promise((resolve, reject) => {
+		/**
+		 * @type {CirclePacker | undefined}
+		 */
+
+		try {
+			let packer;
+
+			const circlePackerParams = {
+				...params,
+				continuousMode: false,
+				onMove: (updatedCircles, target, overlappingCircles) => {
+					resolve({
+						updatedCircles,
+						target,
+						overlappingCircles,
+					});
+				},
+			};
+
+			packer = new CirclePacker(circlePackerParams);
+		} catch (error) {
+			reject(error);
+		}
+	});
+}
+
+CirclePacker.pack = pack;

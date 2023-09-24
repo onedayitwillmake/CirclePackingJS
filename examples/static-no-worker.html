@@ -12,6 +12,7 @@
 		<h1>one time drawing</h1>
 		<p>the circle positions are calculated just once. you can use the buttons below to update the display.</p>
 		<p>this example uses the es module version of the circlepacker script.</p>
+		<p>it also shows how to calculate the results on the main thread, without a web worker.</p>
 		<p><a href="index.html">back to index</a></p>
 	</article>
 	<div class="container"></div>
@@ -50,6 +51,7 @@
 			circles,
 			onMove: render,
 			continuousMode: false,
+			useWorker: false,
 			collisionPasses: 3,
 			// for static calculation, use high values
 			// for centerPasses to get better results
@@ -168,7 +170,7 @@
 				min = 0;
 			}
 
-			let result = min + Math.random() * (max - min);
+			var result = min + Math.random() * (max - min);
 
 			if (intResult) {
 				result = parseInt(result, 10);

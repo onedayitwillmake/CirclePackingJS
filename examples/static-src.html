@@ -11,7 +11,8 @@
 	<article class="text">
 		<h1>one time drawing</h1>
 		<p>the circle positions are calculated just once. you can use the buttons below to update the display.</p>
-		<p>this example uses the es module version of the circlepacker script.</p>
+		<p>this example uses the development version of the circlepacker script: it runs the code as-is, without any
+			build step. it is mostly useful for development purposes.</p>
 		<p><a href="index.html">back to index</a></p>
 	</article>
 	<div class="container"></div>
@@ -19,7 +20,7 @@
 	<button id="delete-circle">delete circle</button>
 	<button id="random-size">random size</button>
 	<script type="module">
-		import { CirclePacker } from '../dist/circlepacker.esm.js';
+		import { CirclePacker } from '../src/CirclePacker.js';
 
 		const containerEl = document.querySelector('.container');
 		const addButtonEl = document.querySelector('#add-circle');
@@ -57,6 +58,9 @@
 			// for static calculation, use high
 			// values for correctionPasses to get better results
 			correctionPasses: 120,
+
+			// the path to the worker file from the current location
+			workerPath: '../src/CirclePackWorker.js'
 		});
 
 		addButtonEl.addEventListener('click', addRandomCircle);
@@ -168,7 +172,7 @@
 				min = 0;
 			}
 
-			let result = min + Math.random() * (max - min);
+			var result = min + Math.random() * (max - min);
 
 			if (intResult) {
 				result = parseInt(result, 10);

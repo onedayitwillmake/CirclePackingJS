@@ -6,7 +6,7 @@ declare module "Vector" {
      * https://github.com/onedayitwillmake/CirclePackingJS/blob/eb3475b/js-module/web/js/lib/Vector.js
      *
      */
-    export default class Vector {
+    export class Vector {
         /**
          * Creates an instance of Vector.
          *
@@ -69,7 +69,7 @@ declare module "PackedCircle" {
          * @constructor
          * @param {PackedCircleData} - The data to instantiate the PackedCircle with
          */
-        constructor({ id, radius, x, y, isPulledToCenter, isPinned }: PackedCircleData);
+        constructor({ id, radius, x, y, isPulledToTarget, isPinned }: PackedCircleData);
         /** @type {CircleID} */
         id: CircleID;
         /**
@@ -95,7 +95,7 @@ declare module "PackedCircle" {
          *
          * @type {boolean}
          **/
-        isPulledToCenter: boolean;
+        isPulledToTarget: boolean;
         /**
          * Is circle pinned inplace
          *
@@ -123,33 +123,157 @@ declare module "PackedCircle" {
          */
         get delta(): Vector;
     }
-    import Vector from "Vector";
+    import { Vector } from "Vector";
+}
+declare module "util" {
+    /**
+     * Generate a random number
+     *
+     * @export
+     * @param {number} min - The lower bound for the generated number
+     * @param {number} max - The upper bound for the generated number
+     * @param {boolean} intResult - Return int instead of float
+     * @returns {number}
+     */
+    export function random(min: number, max: number, intResult: boolean): number;
+    /**
+     * Sends data to worker, converts it to JSON first
+     *
+     * @export
+     * @param {Worker} worker - The Worker instance
+     * @param {WorkerMessage} message - The message to send to the worker
+     */
+    export function sendWorkerMessage(worker: Worker, message: WorkerMessage): void;
+    /**
+     * Handle data received by the web worker: Parse JSON
+     *
+     * @export
+     * @param {MessageEvent<string>} event - The worker event
+     * @returns {(WorkerMessage | undefined)}
+     */
+    export function processWorkerMessage(event: MessageEvent<string>): (WorkerMessage | undefined);
+    /**
+     * Handle data received by the web worker: Parse JSON
+     *
+     * @export
+     * @param {MessageEvent<string>} event - The worker event
+     * @returns {WorkerResponse | undefined}
+     */
+    export function processWorkerResponse(event: MessageEvent<string>): WorkerResponse | undefined;
+    /**
+     * Check if circle object is valid
+     *
+     * @export
+     * @param {object | undefined | number | string | boolean | function} circle - The circle to check
+     * @returns {boolean}
+     */
+    export function isCircleValid(circle: object | undefined | number | string | boolean | Function): boolean;
+    /**
+     * Check if bounds object is valid
+     *
+     * @export
+     * @param {object | undefined | number | string | boolean | function} bounds - The bounds object to check
+     * @returns {boolean}
+     */
+    export function isBoundsValid(bounds: object | undefined | number | string | boolean | Function): boolean;
+    /**
+     * Converts bounds data to rect
+     *
+     * @export
+     * @param {object | undefined | number | string | boolean | function} bounds - The BoundsData object
+     * @returns {BoundsRect | undefined} - The bounds rect
+     */
+    export function boundsDataToRect(bounds: object | undefined | number | string | boolean | Function): BoundsRect | undefined;
+    /**
+     * Check if we can use id
+     *
+     * @export
+     * @param {object | undefined | number | string | boolean | function} id - The id tp check
+     * @returns {boolean}
+     */
+    export function isIdValid(id: object | undefined | number | string | boolean | Function): boolean;
+    /**
+     * Coeck if number is in range
+     *
+     * @export
+     * @param {object | undefined | number | string | boolean | function} number
+     * @param {number} min
+     * @param {number} max
+     * @returns {boolean}
+     */
+    export function isNumberBetween(number: object | undefined | number | string | boolean | Function, min: number, max: number): boolean;
+    /**
+     * Check if number is greater than
+     *
+     * @export
+     * @param {object | undefined | number | string | boolean | function} number
+     * @param {number} min
+     * @returns {boolean}
+     */
+    export function isNumberGreaterThan(number: object | undefined | number | string | boolean | Function, min: number): boolean;
+    /**
+     * Check if radius is valid
+     *
+     * @export
+     * @param {object | undefined | number | string | boolean | function} point
+     * @returns {boolean}
+     */
+    export function isPointValid(point: object | undefined | number | string | boolean | Function): boolean;
 }
 declare module "PackedCircleManager" {
     /**
      * The PackedCircleManager handles updating the state. It runs in a web worker
-     *
      */
-    export default class PackedCircleManager {
+    export class PackedCircleManager {
         /** @type {PackedCircle[]} */
         allCircles: PackedCircle[];
         /** @type {CircleID[]} */
         pinnedCircleIds: CircleID[];
         /** @type {Vector | undefined} */
         desiredTarget: Vector | undefined;
-        /** @type {BoundsData} */
-        bounds: BoundsData;
+        /** @type {BoundsRect | undefined} */
+        boundsRect: BoundsRect | undefined;
         /** @type {number} */
         damping: number;
-        /** @type {number} */
+        /**
+         * Should all items be pulled to the target?
+         *
+         * @type {boolean}
+         * */
+        isTargetPullActive: boolean;
+        /**
+         * Do we want to calculate overlapping circles for each update?
+         * It might be an expensive operation and is not always needed
+         *
+         * @type {boolean}
+         * */
+        calculateOverlap: boolean;
+        /**
+         * Number of passes for centering
+         * It's (O)logN^2 so use increase at your own risk!
+         * Play with these numbers - see what works best for your project
+         *
+         * @type {number}
+         * */
         numberOfCenteringPasses: number;
-        /** @type {number} */
+        /**
+         * Number of passes for collision
+         * It's (O)logN^2 so use increase at your own risk!
+         * Play with these numbers - see what works best for your project
+         *
+         * @type {number}
+         * */
         numberOfCollisionPasses: number;
-        /** @type {boolean} */
-        isCenterPullActive: boolean;
+        /**
+         * Number of passes for correcting overlapping circles
+         * This is can be a very expensive operation so increase at your own risk!
+         * Play with these numbers - see what works best for your project
+         *
+         * @type {number}
+         * */
+        numberOfCorrectionPasses: number;
         /**
          * Set the boundary rectangle for the circle packing.
-         * This is used to locate the 'center'
          *
          * @param {BoundsData} aBoundaryObject - The boundary to set
          */
@@ -182,12 +306,28 @@ declare module "PackedCircleManager" {
          */
         handleCollisions(): void;
         /**
+         * Collide circles with boundaries
+         */
+        handleBoundaryCollisions(): void;
+        /**
          * Ensure the circle stays inside the boundaries
          *
          * @param {PackedCircle} aCircle - The circle to check
          */
         handleBoundaryForCircle(aCircle: PackedCircle): void;
         draggedCircle: PackedCircle;
+        /**
+         * Calculate overlapping circles for each circle
+         *
+         * @returns {CirclePackerOverlappingCircles}
+         */
+        getOverlappingCircles(): CirclePackerOverlappingCircles;
+        /**
+         * Create a positions object that we can send via postmessage
+         *
+         * @returns {CirclePackerMovementResult}
+         */
+        getPositions(): CirclePackerMovementResult;
         /**
          * Force a certain circle to be the 'draggedCircle'.
          * Can be used to undrag a circle by calling setDraggedCircle(null)
@@ -238,18 +378,18 @@ declare module "PackedCircleManager" {
          */
         setCircleRadius(id: CircleID, radius: number): void;
         /**
-         * Update the centerPull value of a circle
+         * Update the targetPull value of a circle
          *
          * @param {CircleID} id - The id of the circle
-         * @param {boolean} centerPull - The centerPull value
+         * @param {boolean} targetPull - The targetPull value
          */
-        setCircleCenterPull(id: CircleID, centerPull: boolean): void;
+        setCircleTargetPull(id: CircleID, targetPull: boolean): void;
         /**
-         * Set a global centerPull value
+         * Set a global targetPull value
          *
-         * @param {boolean} centerPull - The global canterPull value
+         * @param {boolean} targetPull - The global canterPull value
          */
-        setCenterPull(centerPull: boolean): void;
+        setTargetPull(targetPull: boolean): void;
         /**
          * Gets a circle by its id
          *
@@ -259,119 +399,189 @@ declare module "PackedCircleManager" {
         circleById(id: CircleID): PackedCircle | undefined;
         /**
          * Sets the target position where the circles want to be
-         * @param {VectorData} aPosition - The position of the centerPull target
+         *
+         * @param {VectorData} aPosition - The position of the targetPull target
          */
         setTarget(aPosition: VectorData): void;
+        /**
+         * Sets calculate overlap
+         *
+         * @param {boolean} calculateOverlap
+         */
+        setCalculateOverlap(calculateOverlap: boolean): void;
     }
     import PackedCircle from "PackedCircle";
-    import Vector from "Vector";
+    import { Vector } from "Vector";
 }
-declare module "util" {
+declare module "WorkerLogic" {
     /**
-     * Generate a random number
+     * This class handles all logic that can
+     * live inside of a web worker. It needs to be a class
+     * so that we can instantiate it multiple times for instances of
+     * CirclePacker with useWorker = false. We don't want to reuse an
+     * WorkerLogic instances for multiple CirclePackers.
      *
      * @export
-     * @param {number} min - The lower bound for the generated number
-     * @param {number} max - The upper bound for the generated number
-     * @param {boolean} intResult - Return int instead of float
-     * @returns {number}
+     * @class WorkerLogic
+     * @typedef {WorkerLogic}
      */
-    export function random(min: number, max: number, intResult: boolean): number;
-    /**
-     * Sends data to worker, converts it to JSON first
-     *
-     * @export
-     * @param {Worker} worker - The Worker instance
-     * @param {WorkerMessage} message - The message to send to the worker
-     */
-    export function sendWorkerMessage(worker: Worker, message: WorkerMessage): void;
-    /**
-     * Handle data received by the web worker: Parse JSON
-     *
-     * @export
-     * @param {MessageEvent<string>} event - The worker event
-     * @returns {WorkerResponse | undefined}
-     */
-    export function processWorkerMessage(event: MessageEvent<string>): WorkerResponse | undefined;
-    /**
-     * Check if circle object is valid
-     *
-     * @export
-     * @param {PackedCircle} circle - The circle to check
-     * @returns {boolean}
-     */
-    export function isCircleValid(circle: PackedCircle): boolean;
-    /**
-     * Check if bounds object is valid
-     *
-     * @export
-     * @param {BoundsData} bounds - The bounds object to check
-     * @returns {boolean}
-     */
-    export function isBoundsValid(bounds: BoundsData): boolean;
-    /**
-     * Check if we can use id
-     *
-     * @export
-     * @param {any} id - The id tp check
-     * @returns {boolean}
-     */
-    export function isIdValid(id: any): boolean;
-    /**
-     * Coeck if number is in range
-     *
-     * @export
-     * @param {any} number
-     * @param {number} min
-     * @param {number} max
-     * @returns {boolean}
-     */
-    export function isNumberBetween(number: any, min: number, max: number): boolean;
-    /**
-     * Check if number is greater than
-     *
-     * @export
-     * @param {any} number
-     * @param {number} min
-     * @returns {boolean}
-     */
-    export function isNumberGreaterThan(number: any, min: number): boolean;
-    /**
-     * Check if radius is valid
-     *
-     * @export
-     * @param {any} point
-     * @returns {boolean}
-     */
-    export function isPointValid(point: any): boolean;
-    import PackedCircle from "PackedCircle";
+    export class WorkerLogic {
+        circleManager: PackedCircleManager;
+        /**
+         * Handle message events that were received from the main script
+         * and trigger the appropriate actions
+         *
+         * @param {WorkerMessage} [message]
+         * @param {WorkerResponseCallback} [handleResponse]
+         */
+        handleWorkerMessage(message?: WorkerMessage, handleResponse?: WorkerResponseCallback): void;
+        /**
+         * Create new circles based on the received circle data
+         *
+         * @param {PackedCircleData[]} circles - The circles to add
+         */
+        addCircles(circles: PackedCircleData[]): void;
+        /**
+         * Update the pull targets position
+         *
+         * @param {VectorData} target - The new target position
+         */
+        setTarget(target: VectorData): void;
+        /**
+         * Calculate the next circle positions
+         */
+        update(): void;
+        /**
+         * Send the new circle positions to the main script
+         *
+         * @param {WorkerResponseCallback} [handleResponse]
+         */
+        sendPositions(handleResponse?: WorkerResponseCallback): void;
+    }
+    import { PackedCircleManager } from "PackedCircleManager";
 }
 declare module "CirclePackWorker" {
     export {};
 }
-declare module "CirclePacker" {
+declare module "CirclePackerBrowser" {
     /**
-     * This class keeps track of the drawing loop in continuous drawing mode
-     * and passes messages to the worker
+     * This class keeps track of the drawing loop in continuous drawing mode.
+     * It is not available in node.
      */
-    export default class CirclePacker {
+    export class CirclePackerBrowser {
         /**
          * Creates an instance of CirclePacker.
          *
          * @constructor
          * @param {CirclePackerParams} params - The params to instantiate the CirclePacker with
          */
-        constructor(params: CirclePackerParams);
-        worker: Worker;
+        constructor(params?: CirclePackerParams);
+        /**
+         * Is the continuous mode active?
+         * In that case, we need to start and stop the animation loop
+         *
+         * @type {boolean}
+         * */
         isContinuousModeActive: boolean;
-        onMoveStart: any;
-        onMove: any;
-        onMoveEnd: any;
-        lastCirclePositions: any[];
+        /**
+         * Callback for when the loop animation starts
+         *
+         * @type {OnMoveStartCallback | null}
+         */
+        onMoveStart: OnMoveStartCallback | null;
+        /**
+         * Callback for when the loop animation end
+         *
+         * @type {OnMoveEndCallback | null}
+         */
+        onMoveEnd: OnMoveEndCallback | null;
+        /**
+         * Is the animation loop running?
+         *
+         * @type {boolean}
+         */
         isLooping: boolean;
+        /**
+         * Have items moved since the last loop?
+         *
+         * @type {boolean}
+         */
         areItemsMoving: boolean;
+        /**
+         * Reference to the current animation frame
+         *
+         * @type {number}
+         */
         animationFrameId: number;
-        initialized: boolean;
+        /**
+         * Handles Worker response
+         * Stops loop if necessary, updates listeners
+         *
+         * @param {WorkerResponse} response
+         */
+        handleWorkerResponse(response: WorkerResponse): void;
+        /**
+         * Circles were added: force loop start
+         */
+        forceMovement(): void;
+        /**
+         * Update the callbacks
+         *
+         * @param {WorkerResponse} response
+         */
+        updateListeners(response: WorkerResponse): void;
+        /**
+         * The update loop that calls itself recursively every animation frame
+         */
+        updateLoop(): void;
+        /**
+         * Start the update loop
+         */
+        startLoop(): void;
+        /**
+         * Stop the update loop
+         */
+        stopLoop(): void;
+        /**
+         * Check if an item has moved. Count items that have moved barely as not moved
+         *
+         * @param {CirclePackerMovementResult} positions
+         * @returns {boolean}
+         */
+        hasItemMoved(positions: CirclePackerMovementResult): boolean;
+        /**
+         * Tear down worker, remove cllbacks
+         */
+        destroy(): void;
+    }
+}
+declare module "CirclePacker" {
+    /**
+     * Pack circles as simple async function. Only works for one-time operations
+     *
+     * @export
+     * @param {PackParams} params - The params for the circlepacker.
+     * @returns {PromiseLike<PackResponse>}
+     */
+    export function pack(params?: PackParams): PromiseLike<PackResponse>;
+    /**
+     * This class passes messages to the worker and notifies subscribers
+     */
+    export class CirclePacker extends CirclePackerBrowser {
+        id: string;
+        useWorker: boolean;
+        worker: Worker;
+        workerLogic: WorkerLogic;
+        /**
+         * The onMove callback function. Called whenever the circle positions have changed
+         * @type {OnMoveCallback}
+         */
+        onMove: OnMoveCallback;
+        /**
+         * Stores the circle positions from last update
+         * @type {CirclePackerMovementResult}
+         */
+        lastCirclePositions: CirclePackerMovementResult;
         /**
          * Handle message that was received from worker
          *
@@ -384,12 +594,6 @@ declare module "CirclePacker" {
          * @param {WorkerAction} action
          */
         updateWorker(action: WorkerAction): void;
-        /**
-         * Update the callbacks
-         *
-         * @param {WorkerResponse} response
-         */
-        updateListeners(response: WorkerResponse): void;
         /**
          * API for adding circles
          *
@@ -433,18 +637,18 @@ declare module "CirclePacker" {
          */
         setCircleRadius(circleRef: CircleRef, radius: number): void;
         /**
-         * Set centerPull value of a Circle
+         * Set targetPull value of a Circle
          *
          * @param {CircleRef} circleRef - The circle
-         * @param {boolean} centerPull - The new centerPull value
+         * @param {boolean} targetPull - The new targetPull value
          */
-        setCircleCenterPull(circleRef: CircleRef, centerPull: boolean): void;
+        setCircleTargetPull(circleRef: CircleRef, targetPull: boolean): void;
         /**
          * Set global center pull value
          *
-         * @param {boolean} centerPull - The new centerPull value
+         * @param {boolean} targetPull - The new targetPull value
          */
-        setCenterPull(centerPull: boolean): void;
+        setTargetPull(targetPull: boolean): void;
         /**
          * Set new boundaries for the area
          *
@@ -462,6 +666,9 @@ declare module "CirclePacker" {
         /**
          * Updates the number of centering passes
          *
+         * It's (O)logN^2 so use increase at your own risk.
+         * Play with these numbers - see what works best for your project.
+         *
          * @throws Will throw an error if the number of centering passes is malformed
          * @param {number} numberOfCenteringPasses - The new number of centering passes. Expects a number >= 1
          */
@@ -469,10 +676,30 @@ declare module "CirclePacker" {
         /**
          * Sets the number of collision passes
          *
+         * It's (O)logN^2 so use increase at your own risk.
+         * Play with these numbers - see what works best for your project.
+         *
          * @throws Will throw an error if the number of collision passes is malformed
          * @param {number} numberOfCollisionPasses - Sets the new number of collision passes. Expects a number >= 1
          */
         setCollisionPasses(numberOfCollisionPasses: number): void;
+        /**
+         * Sets the number of correction passes
+         *
+         * This is can be a very expensive operation so increase at your own risk.
+         * Play with these numbers - see what works best for your project.
+         *
+         * @throws Will throw an error if the number of collision passes is malformed
+         * @param {number} numberOfCorrectionPasses - Sets the new number of correction passes. Expects a number >= 0
+         */
+        setCorrectionPasses(numberOfCorrectionPasses: number): void;
+        /**
+         * Should we calculate the overlap on each update?
+         *
+         * @throws Will throw an error if calculateOverlap is not boolean
+         * @param {boolean} calculateOverlap - Sets the calculateOverlap value
+         */
+        setCalculateOverlap(calculateOverlap: boolean): void;
         /**
          * Sets the damping value
          *
@@ -506,40 +733,38 @@ declare module "CirclePacker" {
          * @param {CircleRef} circleRef - The circle reference
          */
         dragEnd(circleRef: CircleRef): void;
-        /**
-         * The update loop that calls itself recursively every animation frame
-         */
-        updateLoop(): void;
-        /**
-         * Start the update loop
-         */
-        startLoop(): void;
-        /**
-         * Stop the update loop
-         */
-        stopLoop(): void;
-        /**
-         * Check if an item has moved. Count items that have moved barely as not moved
-         *
-         * @param {CirclePackerMovementResult} positions
-         * @returns {boolean}
-         */
-        hasItemMoved(positions: CirclePackerMovementResult): boolean;
-        /**
-         * Tear down worker, remove cllbacks
-         */
-        destroy(): void;
     }
+    export namespace CirclePacker {
+        export { pack };
+    }
+    import { CirclePackerBrowser } from "CirclePackerBrowser";
+    import { WorkerLogic } from "WorkerLogic";
 }
 type CirclePackerParams = {
     /**
+     * - The onMove callback. Your render function goes here.
+     */
+    onMove?: OnMoveCallback;
+    /**
+     * - Function to execute after movement started
+     */
+    onMoveStart?: OnMoveStartCallback;
+    /**
+     * - Function to execute after movement ended
+     */
+    onMoveEnd?: OnMoveEndCallback;
+    /**
      * - The boundaries of the area
      */
-    bounds: BoundsData;
+    bounds?: BoundsData;
     /**
      * - The circles
      */
-    circles: PackedCircleData[];
+    circles?: PackedCircleData[];
+    /**
+     * - The attraction target
+     */
+    target?: VectorData;
     /**
      * - Update the circle positions in a continuous animation loop?
      */
@@ -553,17 +778,32 @@ type CirclePackerParams = {
      */
     collisionPasses?: number;
     /**
-     * - The path to the webworker
+     * - The number of overlap correction passes
+     */
+    correctionPasses?: number;
+    /**
+     * - Calculate overlap for circles
+     */
+    calculateOverlap?: boolean;
+    /**
+     * - Set to false to skip using the Web Worker
+     */
+    useWorker?: boolean;
+    /**
+     * - The path to the webworker, only relevant if running the uncompiled source
      */
     workerPath?: string;
 };
+type OnMoveStartCallback = (updatedCircles: CirclePackerMovementResult) => void;
+type OnMoveCallback = (updatedCircles: CirclePackerMovementResult, target?: VectorData, overlappingCircles?: CirclePackerOverlappingCircles) => void;
+type OnMoveEndCallback = (updatedCircles: CirclePackerMovementResult) => void;
 type VectorData = {
     /**
-     * - The X component
+     * - The X component of the vector
      */
     x: number;
     /**
-     * - The Y component
+     * - The Y component of the vector
      */
     y: number;
 };
@@ -590,9 +830,9 @@ type PackedCircleData = {
      */
     isPinned?: boolean;
     /**
-     * - Is circle pulled to center
+     * - Is circle pulled towards the target
      */
-    isPulledToCenter?: boolean;
+    isPulledToTarget?: boolean;
 };
 type PackedCircle = {
     /**
@@ -620,9 +860,9 @@ type PackedCircle = {
      */
     isPinned?: boolean;
     /**
-     * - Is circle pulled to center
+     * - Is circle pulled towards the target
      */
-    isPulledToCenter?: boolean;
+    isPulledToTarget?: boolean;
 };
 type CircleRef = PackedCircleData | PackedCircle | CircleID;
 type PackedCircleMovementData = {
@@ -647,9 +887,9 @@ type PackedCircleMovementData = {
      */
     delta: VectorData;
     /**
-     * - Is the circle pulled to center
+     * - Is the circle pulled towards the target
      */
-    isPulledToCenter: boolean;
+    isPulledToTarget: boolean;
     /**
      * - Is the circle pinned
      */
@@ -658,6 +898,20 @@ type PackedCircleMovementData = {
 type CirclePackerMovementResult = {
     [key: string]: PackedCircleMovementData;
     [key: number]: PackedCircleMovementData;
+};
+type OverlapData = {
+    /**
+     * - The ID of the overlapping circle
+     */
+    overlappingCircleId: CircleID;
+    /**
+     * - The overlap distance (measured along the line between two circle centers)
+     */
+    overlapDistance: number;
+};
+type CirclePackerOverlappingCircles = {
+    [key: string]: OverlapData[];
+    [key: number]: OverlapData[];
 };
 type CircleData = {
     /**
@@ -677,30 +931,14 @@ type CircleData = {
      */
     isPinned?: boolean;
 };
-type ForcePoint = {
-    /**
-     * - The ID of the circle
-     */
-    id: CircleID;
-    /**
-     * - The position of the circle
-     */
-    position: VectorData;
-    /**
-     * - The circle radius
-     */
-    radius: number;
-    force: number;
-    minDistance?: number;
-    maxDistance?: number;
-    forceAtMaxDistance?: number;
-    /**
-     * - References to the attracted circles
-     */
-    attractedCircles?: CircleRef[];
-};
 type WorkerMessage = {
+    /**
+     * - Unique ID of the message
+     */
     messageId: number;
+    /**
+     * - Action that the worker should take
+     */
     action: WorkerAction;
 };
 type BoundsPoints = {
@@ -731,7 +969,7 @@ type BoundsDimensions = {
      */
     y?: number;
 };
-type BoundsDirections = {
+type BoundsRect = {
     /**
      * - The bounds x position
      */
@@ -739,7 +977,7 @@ type BoundsDirections = {
     /**
      * - The bounds y position
      */
-    topt: number;
+    top: number;
     /**
      * - The bounds x2 position
      */
@@ -770,85 +1008,219 @@ type BoundsPositions = {
 /**
  * - Data needed to construct a Bounds instance
  */
-type BoundsData = BoundsDimensions;
+type BoundsData = BoundsDimensions | BoundsPoints | BoundsRect | BoundsPositions;
 type SetBoundsAction = {
     type: 'SET_BOUNDS';
+    /**
+     * - The new bounds object
+     */
     bounds: BoundsData;
 };
 type CenteringPassesAction = {
     type: 'SET_CENTERING_PASSES';
+    /**
+     * - The new number of centering passes
+     */
     numberOfCenteringPasses: number;
 };
 type CollisionPassesAction = {
     type: 'SET_COLLISION_PASSES';
+    /**
+     * - The new number of collision passes
+     */
     numberOfCollisionPasses: number;
+};
+type CorrectionPassesAction = {
+    type: 'SET_CORRECTION_PASSES';
+    /**
+     * - The new number of correction passes
+     */
+    numberOfCorrectionPasses: number;
+};
+type CalculateOverlapAction = {
+    type: 'SET_CALCULATE_OVERLAP';
+    /**
+     * - The new calculateOverlap value
+     */
+    calculateOverlap: boolean;
 };
 type DampingAction = {
     type: 'SET_DAMPING';
+    /**
+     * - The new damping value
+     */
     damping: number;
 };
 type UpdateAction = {
     type: 'UPDATE';
 };
-type CenterPullAction = {
-    type: 'SET_CENTER_PULL';
-    centerPull: boolean;
+type TargetPullAction = {
+    type: 'SET_TARGET_PULL';
+    /**
+     * - The new target pull value
+     */
+    targetPull: boolean;
 };
 type AddCirclesAction = {
     type: 'ADD_CIRCLES';
+    /**
+     * - The new circles to add
+     */
     circles: PackedCircleData[];
 };
 type RemoveCircleAction = {
     type: 'REMOVE_CIRCLE';
+    /**
+     * - The ID of the circle to remove
+     */
     id: CircleID;
-    circles: PackedCircleData[];
 };
 type DragStartAction = {
     type: 'DRAG_START';
+    /**
+     * - The ID of the circle
+     */
     id: CircleID;
 };
 type DragEndAction = {
     type: 'DRAG_END';
+    /**
+     * - The ID of the circle
+     */
     id: CircleID;
 };
 type DragMoveAction = {
     type: 'DRAG_MOVE';
+    /**
+     * - The ID of the circle
+     */
     id: CircleID;
+    /**
+     * - The new position of the circle
+     */
     position: VectorData;
 };
 type CircleRadiusAction = {
     type: 'SET_CIRCLE_RADIUS';
+    /**
+     * - The ID of the circle
+     */
     id: CircleID;
+    /**
+     * - The new radius of the circle
+     */
     radius: number;
 };
-type CircleCenterPullAction = {
-    type: 'SET_CIRCLE_CENTER_PULL';
+type CircleTargetPullAction = {
+    type: 'SET_CIRCLE_TARGET_PULL';
+    /**
+     * - The ID of the circle
+     */
     id: CircleID;
-    centerPull: boolean;
+    /**
+     * - The new targetPull value
+     */
+    targetPull: boolean;
 };
 type PinCircleAction = {
     type: 'PIN_CIRCLE';
+    /**
+     * - The ID of the circle
+     */
     id: CircleID;
 };
 type UnpinCircleAction = {
     type: 'UNPIN_CIRCLE';
+    /**
+     * - The ID of the circle
+     */
     id: CircleID;
 };
 type SetTargetAction = {
     type: 'SET_TARGET';
+    /**
+     * - The new position of the attraction target
+     */
     target: VectorData;
 };
-type WorkerAction = SetBoundsAction | CenteringPassesAction | CollisionPassesAction | DampingAction | UpdateAction | CenterPullAction | AddCirclesAction | RemoveCircleAction | DragStartAction | DragMoveAction | DragEndAction | CircleRadiusAction | CircleCenterPullAction | PinCircleAction | UnpinCircleAction | SetTargetAction;
+type WorkerAction = SetBoundsAction | CenteringPassesAction | CollisionPassesAction | CorrectionPassesAction | DampingAction | UpdateAction | TargetPullAction | AddCirclesAction | RemoveCircleAction | DragStartAction | DragMoveAction | DragEndAction | CircleRadiusAction | CircleTargetPullAction | PinCircleAction | UnpinCircleAction | SetTargetAction;
 type MoveResponse = {
     type: 'MOVED';
+    /**
+     * - An object containing all circle data
+     */
     updatedCircles: CirclePackerMovementResult;
+    /**
+     * - The attraction target position
+     */
+    target?: VectorData;
+    /**
+     * - An object containing information about overlapping circles
+     */
+    overlappingCircles?: CirclePackerOverlappingCircles;
 };
 type MoveStartResponse = {
     type: 'MOVE_START';
 };
 type MoveEndResponse = {
     type: 'MOVE_END';
+    /**
+     * - An object containing all circle data
+     */
     updatedCircles: CirclePackerMovementResult;
 };
 type WorkerResponse = MoveResponse | MoveStartResponse | MoveEndResponse;
+type WorkerResponseCallback = (workerResponse: WorkerResponse) => void;
+type PackParams = {
+    /**
+     * - The boundaries of the area
+     */
+    bounds?: BoundsData;
+    /**
+     * - The circles
+     */
+    circles?: PackedCircleData[];
+    /**
+     * - The attraction target
+     */
+    target?: VectorData;
+    /**
+     * - The number of centering passes
+     */
+    centeringPasses?: number;
+    /**
+     * - The number of collistion passes
+     */
+    collisionPasses?: number;
+    /**
+     * - The number of overlap correction passes
+     */
+    correctionPasses?: number;
+    /**
+     * - Calculate overlap for circles
+     */
+    calculateOverlap?: boolean;
+    /**
+     * - Set to false to skip using the Web Worker
+     */
+    useWorker?: boolean;
+    /**
+     * - The path to the webworker, only relevant if running the uncompiled source
+     */
+    workerPath?: string;
+};
+type PackResponse = {
+    /**
+     * - An object containing all circle data
+     */
+    updatedCircles: CirclePackerMovementResult;
+    /**
+     * - The attraction target position
+     */
+    target?: VectorData;
+    /**
+     * - An object containing information about overlapping circles
+     */
+    overlappingCircles?: CirclePackerOverlappingCircles;
+};
 //# sourceMappingURL=types.d.ts.map

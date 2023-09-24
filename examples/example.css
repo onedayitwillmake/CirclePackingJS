@@ -77,3 +77,39 @@ h1 {
 	font-family: monospace;
 	text-align: right;
 }
+
+.target {
+	width: 0;
+	height: 0;
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.target::before {
+	content: '';
+	width: 1px;
+	height: 16px;
+	background-color: black;
+	position: absolute;
+	left: 0;
+	top: 0;
+	transform: translateX(-50%) translateY(-50%);
+}
+
+.target::after {
+	content: '';
+	width: 16px;
+	height: 1px;
+	background-color: black;
+	position: absolute;
+	left: 0;
+	top: 0;
+	transform: translateX(-50%) translateY(-50%);
+}
+
+.buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+}

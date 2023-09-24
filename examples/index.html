@@ -2,19 +2,48 @@
 <html>
 
 <head>
-	<meta charset="utf-8" />
-	<title>circlepacker</title>
-	<link rel="stylesheet" href="./example.css" />
+	<title>circlepacker examples</title>
 </head>
+<style>
+	body {
+		padding: 50px;
+		color: #666;
+		font-family: sans-serif;
+		font-size: 16px;
+	}
+
+	a {
+		color: #06f;
+		text-decoration: none;
+	}
+
+	a:hover {
+		text-decoration: underline;
+	}
+
+	h1 {
+		font-size: 16px;
+		color: #333;
+	}
+
+	.text {
+		width: 300px;
+		margin-bottom: 30px;
+	}
+</style>
 
 <body>
 	<article class="text">
 		<h1>circlepacker examples</h1>
 		<ul>
 			<li><a href="continuous.html">continuous drawing</a></li>
+			<li><a href="continuous-no-worker.html">continuous drawing (no webworker)</a></li>
+			<li><a href="continuous-src.html">continuous drawing (uncompiled source)</a></li>
 			<li><a href="static.html">one-time calculation</a></li>
-			<li><a href="continuous-es6.html">continuous drawing (es6)</a></li>
-			<li><a href="static-es6.html">one-time calculation (es6)</a></li>
+			<li><a href="static-no-worker.html">one-time calculation (no webworker)</a></li>
+			<li><a href="static-src.html">one-time calculation (uncompiled source)</a></li>
+			<li><a href="node-es-module.mjs">one-time calculation (node es module)</a></li>
+			<li><a href="node-commonjs-module.js">one-time calculation (node commonjs module)</a></li>
 		</ul>
 	</article>
 </body>

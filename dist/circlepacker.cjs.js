@@ -2,17 +2,13 @@
 /**
  * @typedef {Object} CirclePackerParams
  * @prop {OnMoveCallback}[onMove] - The onMove callback. Your render function goes here.
- * @prop {OnMoveStartCallback}[onMoveStart] - Function to execute after movement started
- * @prop {OnMoveEndCallback}[onMoveEnd] - Function to execute after movement ended
  * @prop {BoundsData} [bounds] - The boundaries of the area
  * @prop {PackedCircleData[]} [circles] - The circles
  * @prop {VectorData} [target] - The attraction target
- * @prop {boolean} [continuousMode=true] - Update the circle positions in a continuous animation loop?
  * @prop {number} [centeringPasses=1] - The number of centering passes
  * @prop {number} [collisionPasses=3] - The number of collistion passes
  * @prop {number} [correctionPasses=3] - The number of overlap correction passes
  * @prop {boolean} [calculateOverlap=false] - Calculate overlap for circles
- * @prop {boolean} [useWorker=true] - Set to false to skip using the Web Worker
  *
  * @callback OnMoveStartCallback
  * @param {CirclePackerMovementResult} updatedCircles - An object containing all circle data
@@ -209,7 +205,6 @@
  * @prop {number} [collisionPasses=3] - The number of collistion passes
  * @prop {number} [correctionPasses=3] - The number of overlap correction passes
  * @prop {boolean} [calculateOverlap=false] - Calculate overlap for circles
- * @prop {boolean} [useWorker=true] - Set to false to skip using the Web Worker
  *
  * @typedef {Object} PackResponse
  * @prop {CirclePackerMovementResult} updatedCircles - An object containing all circle data
@@ -218,10 +213,10 @@
  */
 
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.CirclePacker = factory());
-})(this, (function () { 'use strict';
+	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+	typeof define === 'function' && define.amd ? define(['exports'], factory) :
+	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.CirclePacker = {}));
+})(this, (function (exports) { 'use strict';
 
 	/**
 	 * Vector class
@@ -413,17 +408,6 @@
 				this.position.y - this.previousPosition.y
 			);
 		}
-	}
-
-	/**
-	 * Sends data to worker, converts it to JSON first
-	 *
-	 * @export
-	 * @param {Worker} worker - The Worker instance
-	 * @param {WorkerMessage} message - The message to send to the worker
-	 */
-	function sendWorkerMessage(worker, message) {
-		worker.postMessage(JSON.stringify(message));
 	}
 
 	/**
@@ -1286,176 +1270,9 @@
 	}
 
 	/**
-	 * This class keeps track of the drawing loop in continuous drawing mode.
-	 * It is not available in node.
-	 */
-	class CirclePackerBrowser {
-		/**
-		 * Creates an instance of CirclePacker.
-		 *
-		 * @constructor
-		 * @param {CirclePackerParams} params - The params to instantiate the CirclePacker with
-		 */
-		constructor(params = {}) {
-			/**
-			 * Is the continuous mode active?
-			 * In that case, we need to start and stop the animation loop
-			 *
-			 * @type {boolean}
-			 * */
-			this.isContinuousModeActive =
-				typeof params.continuousMode === 'boolean' ? params.continuousMode : true;
-
-			/**
-			 * Callback for when the loop animation starts
-			 *
-			 * @type {OnMoveStartCallback | null}
-			 */
-			this.onMoveStart = params.onMoveStart || null;
-
-			/**
-			 * Callback for when the loop animation end
-			 *
-			 * @type {OnMoveEndCallback | null}
-			 */
-			this.onMoveEnd = params.onMoveEnd || null;
-
-			/**
-			 * Is the animation loop running?
-			 *
-			 * @type {boolean}
-			 */
-			this.isLooping = false;
-
-			/**
-			 * Have items moved since the last loop?
-			 *
-			 * @type {boolean}
-			 */
-			this.areItemsMoving = false;
-
-			/**
-			 * Reference to the current animation frame
-			 *
-			 * @type {number}
-			 */
-			this.animationFrameId = NaN;
-		}
-
-		/**
-		 * Handles Worker response
-		 * Stops loop if necessary, updates listeners
-		 *
-		 * @param {WorkerResponse} response
-		 */
-		handleWorkerResponse(response) {
-			if (response.type === 'MOVED') {
-				const movedCircles = response.updatedCircles;
-
-				this.areItemsMoving = this.hasItemMoved(movedCircles);
-
-				if (!this.areItemsMoving && this.isLooping && this.isContinuousModeActive) {
-					this.stopLoop();
-				}
-			}
-		}
-
-		/**
-		 * Circles were added: force loop start
-		 */
-		forceMovement() {
-			if (this.isContinuousModeActive) {
-				this.areItemsMoving = true;
-			}
-		}
-
-		/**
-		 * Update the callbacks
-		 *
-		 * @param {WorkerResponse} response
-		 */
-		updateListeners(response) {
-			if (response.type === 'MOVE_START' && typeof this.onMoveStart === 'function') {
-				this.onMoveStart();
-			}
-
-			if (response.type === 'MOVE_END' && typeof this.onMoveEnd === 'function') {
-				this.onMoveEnd(response.updatedCircles);
-			}
-		}
-
-		/**
-		 * The update loop that calls itself recursively every animation frame
-		 */
-		updateLoop() {
-			this.update();
-
-			if (this.isLooping) {
-				if (this.areItemsMoving) {
-					this.animationFrameId = requestAnimationFrame(() => this.updateLoop());
-				} else {
-					this.stopLoop();
-				}
-			}
-		}
-
-		/**
-		 * Start the update loop
-		 */
-		startLoop() {
-			if (!this.isLooping && this.isContinuousModeActive) {
-				this.isLooping = true;
-				this.updateListeners({ type: 'MOVE_START' });
-				this.animationFrameId = requestAnimationFrame(() => this.updateLoop());
-			}
-		}
-
-		/**
-		 * Stop the update loop
-		 */
-		stopLoop() {
-			if (this.isLooping) {
-				this.isLooping = false;
-				this.updateListeners({ type: 'MOVE_END', updatedCircles: this.lastCirclePositions });
-				cancelAnimationFrame(this.animationFrameId);
-			}
-		}
-
-		/**
-		 * Check if an item has moved. Count items that have moved barely as not moved
-		 *
-		 * @param {CirclePackerMovementResult} positions
-		 * @returns {boolean}
-		 */
-		hasItemMoved(positions) {
-			let result = false;
-
-			for (let id in positions) {
-				if (
-					Math.abs(positions[id].delta.x) > 0.005 ||
-					Math.abs(positions[id].delta.y) > 0.005
-				) {
-					result = true;
-				}
-			}
-
-			return result;
-		}
-
-		/**
-		 * Tear down worker, remove cllbacks
-		 */
-		destroy() {
-			this.stopLoop();
-			this.onMoveStart = null;
-			this.onMoveEnd = null;
-		}
-	}
-
-	/**
 	 * This class passes messages to the worker and notifies subscribers
 	 */
-	class CirclePacker extends CirclePackerBrowser {
+	class CirclePacker {
 		/**
 		 * Creates an instance of CirclePacker.
 		 *
@@ -1463,21 +1280,10 @@
 		 * @param {CirclePackerParams} params - The params to instantiate the CirclePacker with
 		 */
 		constructor(params = {}) {
-			super(params);
+			
 			this.id = 'PACKA' + Date.now() + Math.round(Math.random() * 100000);
 
-			this.useWorker = params.useWorker === false ? false : true;
-
-			if (this.useWorker) {
-				if (!Worker) {
-					throw new Error('Web workers are not supported.');
-				}
-
-				
-
-				this.worker = new Worker(URL.createObjectURL(new Blob(["(function (factory) {\n\ttypeof define === 'function' && define.amd ? define(factory) :\n\tfactory();\n})((function () { 'use strict';\n\n\tclass Vector {\n\t\tconstructor(x, y) {\n\t\t\tif (typeof x === 'object') {\n\t\t\t\tthis.x = x.x;\n\t\t\t\tthis.y = x.y;\n\t\t\t} else {\n\t\t\t\tthis.x = x;\n\t\t\t\tthis.y = y;\n\t\t\t}\n\t\t}\n\t\tcp() {\n\t\t\treturn new Vector(this.x, this.y);\n\t\t}\n\t\tmul(scalar) {\n\t\t\tthis.x *= scalar;\n\t\t\tthis.y *= scalar;\n\t\t\treturn this;\n\t\t}\n\t\tnormalize() {\n\t\t\tvar l = this.length();\n\t\t\tthis.x /= l;\n\t\t\tthis.y /= l;\n\t\t\treturn this;\n\t\t}\n\t\tlength() {\n\t\t\tvar length = Math.sqrt(this.x * this.x + this.y * this.y);\n\t\t\tif (length < 0.005 && length > -0.005) {\n\t\t\t\treturn 0.000001;\n\t\t\t}\n\t\t\treturn length;\n\t\t}\n\t\tdistance(otherVector) {\n\t\t\tvar deltaX = this.x - otherVector.x;\n\t\t\tvar deltaY = this.y - otherVector.y;\n\t\t\treturn Math.sqrt(deltaX * deltaX + deltaY * deltaY);\n\t\t}\n\t\tdistanceSquared(otherVector) {\n\t\t\tvar deltaX = this.x - otherVector.x;\n\t\t\tvar deltaY = this.y - otherVector.y;\n\t\t\treturn deltaX * deltaX + deltaY * deltaY;\n\t\t}\n\t}\n\n\tclass PackedCircle {\n\t\tconstructor({ id, radius, x, y, isPulledToTarget, isPinned }) {\n\t\t\tx = x || 0;\n\t\t\ty = y || 0;\n\t\t\tthis.id = id;\n\t\t\tthis.targetPosition = new Vector(0, 0);\n\t\t\tthis.position = new Vector(x, y);\n\t\t\tthis.previousPosition = new Vector(x, y);\n\t\t\tthis.isPulledToTarget = isPulledToTarget;\n\t\t\tthis.isPinned = isPinned;\n\t\t\tthis.setRadius(radius);\n\t\t}\n\t\tsetPosition(aPosition) {\n\t\t\tthis.previousPosition = this.position;\n\t\t\tthis.position = aPosition.cp();\n\t\t}\n\t\tsetRadius(aRadius) {\n\t\t\tthis.radius = aRadius;\n\t\t\tthis.radiusSquared = aRadius * aRadius;\n\t\t}\n\t\tget delta() {\n\t\t\treturn new Vector(\n\t\t\t\tthis.position.x - this.previousPosition.x,\n\t\t\t\tthis.position.y - this.previousPosition.y\n\t\t\t);\n\t\t}\n\t}\n\n\tfunction sendWorkerMessage(worker, message) {\n\t\tworker.postMessage(JSON.stringify(message));\n\t}\n\tfunction processWorkerMessage(event) {\n\t\treturn event.data ? JSON.parse(event.data) : undefined;\n\t}\n\tfunction isBoundsValid(bounds) {\n\t\tif (!typeof bounds === 'object') {\n\t\t\treturn false;\n\t\t}\n\t\tif (\n\t\t\tbounds.point1 &&\n\t\t\tbounds.point2 &&\n\t\t\tisPointValid(bounds.point1) &&\n\t\t\tisPointValid(bounds.point2)\n\t\t) {\n\t\t\treturn true;\n\t\t}\n\t\tif (typeof bounds.width === 'number' && typeof bounds.height === 'number') {\n\t\t\treturn true;\n\t\t}\n\t\tif (\n\t\t\ttypeof bounds.left === 'number' &&\n\t\t\ttypeof bounds.top === 'number' &&\n\t\t\ttypeof bounds.bottom === 'number' &&\n\t\t\ttypeof bounds.right === 'number'\n\t\t) {\n\t\t\treturn true;\n\t\t}\n\t\tif (\n\t\t\ttypeof bounds.x1 === 'number' &&\n\t\t\ttypeof bounds.y1 === 'number' &&\n\t\t\ttypeof bounds.x2 === 'number' &&\n\t\t\ttypeof bounds.y2 === 'number'\n\t\t) {\n\t\t\treturn true;\n\t\t}\n\t\treturn false;\n\t}\n\tfunction boundsDataToRect(bounds) {\n\t\tif (!isBoundsValid(bounds)) {\n\t\t\treturn;\n\t\t}\n\t\tlet left = 0;\n\t\tlet top = 0;\n\t\tlet right = 0;\n\t\tlet bottom = 0;\n\t\tif (typeof bounds.left === 'number') {\n\t\t\tleft = bounds.left;\n\t\t\tright = bounds.right;\n\t\t\ttop = bounds.top;\n\t\t\tbottom = bounds.bottom;\n\t\t} else if (typeof bounds.width == 'number') {\n\t\t\tif (typeof bounds.x === 'number') {\n\t\t\t\tleft = bounds.x;\n\t\t\t}\n\t\t\tif (typeof bounds.y === 'number') {\n\t\t\t\ttop = bounds.y;\n\t\t\t}\n\t\t\tright = left + bounds.width;\n\t\t\tbottom = top + bounds.height;\n\t\t} else if (typeof bounds.x1 === 'number') {\n\t\t\tleft = bounds.x1;\n\t\t\tright = bounds.x2;\n\t\t\ttop = bounds.y1;\n\t\t\tbottom = bounds.y2;\n\t\t} else if (bounds.point1) {\n\t\t\tleft = bounds.point1.x;\n\t\t\tright = bounds.point2.x;\n\t\t\ttop = bounds.point1.y;\n\t\t\tbottom = bounds.point2.y;\n\t\t}\n\t\treturn { left, top, right, bottom };\n\t}\n\tfunction isPointValid(point) {\n\t\treturn typeof point === 'object' && typeof point.x === 'number' && typeof point.y === 'number';\n\t}\n\n\tclass PackedCircleManager {\n\t\tconstructor() {\n\t\t\tthis.allCircles = [];\n\t\t\tthis.pinnedCircleIds = [];\n\t\t\tthis.desiredTarget = undefined;\n\t\t\tthis.boundsRect = undefined;\n\t\t\tthis.damping = 0.025;\n\t\t\tthis.isTargetPullActive = true;\n\t\t\tthis.calculateOverlap = false;\n\t\t\tthis.numberOfCenteringPasses = 1;\n\t\t\tthis.numberOfCollisionPasses = 3;\n\t\t\tthis.numberOfCorrectionPasses = 0;\n\t\t}\n\t\tsetBounds(aBoundaryObject) {\n\t\t\tconst newBoundsRect = boundsDataToRect(aBoundaryObject);\n\t\t\tif (newBoundsRect) {\n\t\t\t\tthis.boundsRect = newBoundsRect;\n\t\t\t}\n\t\t}\n\t\taddCircle(aCircle) {\n\t\t\tif (!(aCircle instanceof PackedCircle)) {\n\t\t\t\taCircle = new PackedCircle({\n\t\t\t\t\tid: aCircle.id,\n\t\t\t\t\tradius: aCircle.radius,\n\t\t\t\t\tx: aCircle.position.x || 0,\n\t\t\t\t\ty: aCircle.position.y || 0,\n\t\t\t\t\tisPinned: aCircle.isPinned || false,\n\t\t\t\t\tisPulledToTarget:\n\t\t\t\t\t\ttypeof aCircle.isPulledToTarget === 'boolean' ? aCircle.isPulledToTarget : true,\n\t\t\t\t});\n\t\t\t}\n\t\t\tthis.allCircles.push(aCircle);\n\t\t\tif (this.desiredTarget) {\n\t\t\t\taCircle.targetPosition = this.desiredTarget.cp();\n\t\t\t}\n\t\t}\n\t\tremoveCircle(circleToRemoveId) {\n\t\t\tthis.allCircles = this.allCircles.filter(circle => circle.id !== circleToRemoveId);\n\t\t}\n\t\tupdatePositions() {\n\t\t\tconst circleList = this.allCircles;\n\t\t\tconst circleCount = circleList.length;\n\t\t\tfor (let i = 0; i < circleCount; ++i) {\n\t\t\t\tconst circle = circleList[i];\n\t\t\t\tcircle.previousPosition = circle.position.cp();\n\t\t\t}\n\t\t\tif (this.desiredTarget && this.isTargetPullActive) {\n\t\t\t\tthis.pushAllCirclesTowardTarget(this.desiredTarget);\n\t\t\t}\n\t\t\tthis.handleCollisions();\n\t\t\tif (this.boundsRect) {\n\t\t\t\tthis.handleBoundaryCollisions();\n\t\t\t\tif (this.numberOfCorrectionPasses > 0) {\n\t\t\t\t\tlet overlapCorrectionTries = 0;\n\t\t\t\t\tlet overlappingCirclesCount = Object.keys(this.getOverlappingCircles()).length;\n\t\t\t\t\twhile (\n\t\t\t\t\t\toverlappingCirclesCount > 0 &&\n\t\t\t\t\t\toverlapCorrectionTries < this.numberOfCorrectionPasses\n\t\t\t\t\t) {\n\t\t\t\t\t\tthis.handleCollisions();\n\t\t\t\t\t\tthis.handleBoundaryCollisions();\n\t\t\t\t\t\toverlappingCirclesCount = Object.keys(this.getOverlappingCircles()).length;\n\t\t\t\t\t\toverlapCorrectionTries += 1;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tpushAllCirclesTowardTarget(aTarget) {\n\t\t\tconst circleMovement = new Vector(0, 0);\n\t\t\tconst dragCircle = this.draggedCircle;\n\t\t\tconst circleList = this.allCircles;\n\t\t\tconst circleCount = circleList.length;\n\t\t\tfor (\n\t\t\t\tlet centeringPassNumber = 0;\n\t\t\t\tcenteringPassNumber < this.numberOfCenteringPasses;\n\t\t\t\tcenteringPassNumber++\n\t\t\t) {\n\t\t\t\tfor (let circleIndex = 0; circleIndex < circleCount; circleIndex++) {\n\t\t\t\t\tconst circle = circleList[circleIndex];\n\t\t\t\t\tif (circle.isPulledToTarget) {\n\t\t\t\t\t\tconst isCircleKinematic =\n\t\t\t\t\t\t\tcircle === dragCircle || this.isCirclePinned(circle.id);\n\t\t\t\t\t\tif (isCircleKinematic) {\n\t\t\t\t\t\t\tcontinue;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tcircleMovement.x = circle.position.x - aTarget.x;\n\t\t\t\t\t\tcircleMovement.y = circle.position.y - aTarget.y;\n\t\t\t\t\t\tcircleMovement.mul(this.damping);\n\t\t\t\t\t\tcircle.position.x -= circleMovement.x;\n\t\t\t\t\t\tcircle.position.y -= circleMovement.y;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\thandleCollisions() {\n\t\t\tconst circleCollisionMovement = new Vector(0, 0);\n\t\t\tconst dragCircle = this.draggedCircle;\n\t\t\tconst circleList = this.allCircles;\n\t\t\tconst circleCount = circleList.length;\n\t\t\tfor (\n\t\t\t\tlet collisionPassNumber = 0;\n\t\t\t\tcollisionPassNumber < this.numberOfCollisionPasses;\n\t\t\t\tcollisionPassNumber++\n\t\t\t) {\n\t\t\t\tfor (let circleAIndex = 0; circleAIndex < circleCount; circleAIndex++) {\n\t\t\t\t\tconst circleA = circleList[circleAIndex];\n\t\t\t\t\tfor (\n\t\t\t\t\t\tlet circleBIndex = circleAIndex + 1;\n\t\t\t\t\t\tcircleBIndex < circleCount;\n\t\t\t\t\t\tcircleBIndex++\n\t\t\t\t\t) {\n\t\t\t\t\t\tconst circleB = circleList[circleBIndex];\n\t\t\t\t\t\tconst isCircleAPinned = this.isCirclePinned(circleA.id);\n\t\t\t\t\t\tconst isCircleBPinned = this.isCirclePinned(circleB.id);\n\t\t\t\t\t\tconst isCircleAKinematic = circleA === dragCircle || isCircleAPinned;\n\t\t\t\t\t\tconst isCircleBKinematic = circleB === dragCircle || isCircleBPinned;\n\t\t\t\t\t\tif (\n\t\t\t\t\t\t\tcircleA === circleB ||\n\t\t\t\t\t\t\t(isCircleAKinematic && isCircleBKinematic)\n\t\t\t\t\t\t) {\n\t\t\t\t\t\t\tcontinue;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tconst dx = circleB.position.x - circleA.position.x;\n\t\t\t\t\t\tconst dy = circleB.position.y - circleA.position.y;\n\t\t\t\t\t\tconst combinedRadii = (circleA.radius + circleB.radius) * 1.08;\n\t\t\t\t\t\tconst distanceSquared = circleA.position.distanceSquared(circleB.position);\n\t\t\t\t\t\tif (distanceSquared < combinedRadii * combinedRadii - 0.02) {\n\t\t\t\t\t\t\tcircleCollisionMovement.x = dx;\n\t\t\t\t\t\t\tcircleCollisionMovement.y = dy;\n\t\t\t\t\t\t\tcircleCollisionMovement.normalize();\n\t\t\t\t\t\t\tconst inverseForce = (combinedRadii - Math.sqrt(distanceSquared)) * 0.5;\n\t\t\t\t\t\t\tcircleCollisionMovement.mul(inverseForce);\n\t\t\t\t\t\t\tif (!isCircleBKinematic) {\n\t\t\t\t\t\t\t\tif (isCircleAKinematic) {\n\t\t\t\t\t\t\t\t\tcircleCollisionMovement.mul(2.2);\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\tcircleB.position.x += circleCollisionMovement.x;\n\t\t\t\t\t\t\t\tcircleB.position.y += circleCollisionMovement.y;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tif (!isCircleAKinematic) {\n\t\t\t\t\t\t\t\tif (isCircleBKinematic) {\n\t\t\t\t\t\t\t\t\tcircleCollisionMovement.mul(2.2);\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\tcircleA.position.x -= circleCollisionMovement.x;\n\t\t\t\t\t\t\t\tcircleA.position.y -= circleCollisionMovement.y;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\thandleBoundaryCollisions() {\n\t\t\tif (this.boundsRect) {\n\t\t\t\tthis.allCircles.forEach(circle => {\n\t\t\t\t\tthis.handleBoundaryForCircle(circle);\n\t\t\t\t});\n\t\t\t}\n\t\t}\n\t\thandleBoundaryForCircle(aCircle) {\n\t\t\tconst { x, y } = aCircle.position;\n\t\t\tconst radius = aCircle.radius;\n\t\t\tlet isOverEdge = false;\n\t\t\tif (this.boundsRect) {\n\t\t\t\tif (x + radius >= this.boundsRect.right) {\n\t\t\t\t\taCircle.position.x = this.boundsRect.right - radius;\n\t\t\t\t\tisOverEdge = true;\n\t\t\t\t} else if (x - radius < this.boundsRect.left) {\n\t\t\t\t\taCircle.position.x = this.boundsRect.left + radius;\n\t\t\t\t\tisOverEdge = true;\n\t\t\t\t}\n\t\t\t\tif (y + radius > this.boundsRect.bottom) {\n\t\t\t\t\taCircle.position.y = this.boundsRect.bottom - radius;\n\t\t\t\t\tisOverEdge = true;\n\t\t\t\t} else if (y - radius < this.boundsRect.top) {\n\t\t\t\t\taCircle.position.y = this.boundsRect.top + radius;\n\t\t\t\t\tisOverEdge = true;\n\t\t\t\t}\n\t\t\t\tif (isOverEdge && aCircle === this.draggedCircle) {\n\t\t\t\t\tthis.draggedCircle = null;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tgetOverlappingCircles() {\n\t\t\tconst overlappingCircles = {};\n\t\t\tthis.allCircles.forEach(circleA => {\n\t\t\t\tconst overlappingCirclesForCircle = this.allCircles\n\t\t\t\t\t.filter(circleB => circleA.id !== circleB.id)\n\t\t\t\t\t.map(circleB => {\n\t\t\t\t\t\tconst distanceBetweenCirclePositions = new Vector(circleA.position).distance(\n\t\t\t\t\t\t\tcircleB.position\n\t\t\t\t\t\t);\n\t\t\t\t\t\tconst isOverlapping =\n\t\t\t\t\t\t\tdistanceBetweenCirclePositions < circleA.radius + circleB.radius;\n\t\t\t\t\t\tconst overlapDistance = isOverlapping\n\t\t\t\t\t\t\t? circleA.radius + circleB.radius - distanceBetweenCirclePositions\n\t\t\t\t\t\t\t: 0;\n\t\t\t\t\t\treturn { overlappingCircleId: circleB.id, overlapDistance };\n\t\t\t\t\t})\n\t\t\t\t\t.filter(overlapData => {\n\t\t\t\t\t\treturn overlapData.overlapDistance > 0;\n\t\t\t\t\t});\n\t\t\t\tif (overlappingCirclesForCircle.length) {\n\t\t\t\t\toverlappingCircles[circleA.id] = overlappingCirclesForCircle;\n\t\t\t\t}\n\t\t\t});\n\t\t\treturn overlappingCircles;\n\t\t}\n\t\tgetPositions() {\n\t\t\tconst positions = this.allCircles.reduce((result, circle) => {\n\t\t\t\tresult[circle.id] = {\n\t\t\t\t\tid: circle.id,\n\t\t\t\t\tposition: circle.position,\n\t\t\t\t\tpreviousPosition: circle.previousPosition,\n\t\t\t\t\tradius: circle.radius,\n\t\t\t\t\tdelta: circle.delta,\n\t\t\t\t\tisPulledToTarget: circle.isPulledToTarget,\n\t\t\t\t\tisPinned: circle.isPinned,\n\t\t\t\t};\n\t\t\t\treturn result;\n\t\t\t}, {});\n\t\t\treturn positions;\n\t\t}\n\t\tsetDraggedCircle(aCircle) {\n\t\t\tthis.draggedCircle = aCircle;\n\t\t}\n\t\tdragStart(id) {\n\t\t\tconst draggedCircle = this.allCircles.filter(circle => circle.id === id)[0];\n\t\t\tthis.setDraggedCircle(draggedCircle);\n\t\t}\n\t\tdragEnd() {\n\t\t\tif (this.draggedCircle) {\n\t\t\t\tthis.draggedCircle = null;\n\t\t\t}\n\t\t}\n\t\tdrag(id, position) {\n\t\t\tif (this.draggedCircle && position) {\n\t\t\t\tthis.draggedCircle.position.x = position.x;\n\t\t\t\tthis.draggedCircle.position.y = position.y;\n\t\t\t}\n\t\t}\n\t\tisCirclePinned(id) {\n\t\t\tconst circle = this.circleById(id);\n\t\t\tif (circle) {\n\t\t\t\treturn circle.isPinned;\n\t\t\t}\n\t\t\treturn false;\n\t\t}\n\t\tpinCircle(id) {\n\t\t\tconst circle = this.circleById(id);\n\t\t\tif (circle) {\n\t\t\t\tcircle.isPinned = true;\n\t\t\t}\n\t\t}\n\t\tunpinCircle(id) {\n\t\t\tconst circle = this.circleById(id);\n\t\t\tif (circle) {\n\t\t\t\tcircle.isPinned = false;\n\t\t\t}\n\t\t}\n\t\tsetCircleRadius(id, radius) {\n\t\t\tconst circle = this.circleById(id);\n\t\t\tif (circle) {\n\t\t\t\tcircle.setRadius(radius);\n\t\t\t}\n\t\t}\n\t\tsetCircleTargetPull(id, targetPull) {\n\t\t\tconst circle = this.circleById(id);\n\t\t\tif (circle) {\n\t\t\t\tcircle.isPulledToTarget = targetPull;\n\t\t\t}\n\t\t}\n\t\tsetTargetPull(targetPull) {\n\t\t\tthis.isTargetPullActive = targetPull;\n\t\t}\n\t\tcircleById(id) {\n\t\t\treturn this.allCircles.filter(circle => circle.id === id)[0];\n\t\t}\n\t\tsetTarget(aPosition) {\n\t\t\tthis.desiredTarget = aPosition;\n\t\t}\n\t\tsetCalculateOverlap(calculateOverlap) {\n\t\t\tthis.calculateOverlap = calculateOverlap;\n\t\t}\n\t}\n\n\tclass WorkerLogic {\n\t\tconstructor() {\n\t\t\tthis.circleManager = new PackedCircleManager();\n\t\t}\n\t\thandleWorkerMessage(message, handleResponse) {\n\t\t\tif (message) {\n\t\t\t\tconst { action } = message;\n\t\t\t\tswitch (action.type) {\n\t\t\t\t\tcase 'SET_BOUNDS':\n\t\t\t\t\t\tthis.circleManager.setBounds(action.bounds);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'SET_CENTERING_PASSES':\n\t\t\t\t\t\tthis.circleManager.numberOfCenteringPasses = action.numberOfCenteringPasses;\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'SET_COLLISION_PASSES':\n\t\t\t\t\t\tthis.circleManager.numberOfCollisionPasses = action.numberOfCollisionPasses;\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'SET_CORRECTION_PASSES':\n\t\t\t\t\t\tthis.circleManager.numberOfCorrectionPasses = action.numberOfCorrectionPasses;\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'SET_DAMPING':\n\t\t\t\t\t\tthis.circleManager.damping = action.damping;\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'SET_TARGET_PULL':\n\t\t\t\t\t\tthis.circleManager.setTargetPull(action.targetPull);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'UPDATE':\n\t\t\t\t\t\tthis.update();\n\t\t\t\t\t\tthis.sendPositions(handleResponse);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'ADD_CIRCLES':\n\t\t\t\t\t\tthis.addCircles(action.circles);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'REMOVE_CIRCLE':\n\t\t\t\t\t\tthis.circleManager.removeCircle(action.id);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'DRAG_START':\n\t\t\t\t\t\tthis.circleManager.dragStart(action.id);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'DRAG_END':\n\t\t\t\t\t\tthis.circleManager.dragEnd(action.id);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'DRAG_MOVE':\n\t\t\t\t\t\tthis.circleManager.drag(action.id, action.position);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'SET_CIRCLE_RADIUS':\n\t\t\t\t\t\tthis.circleManager.setCircleRadius(action.id, action.radius);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'SET_CIRCLE_TARGET_PULL':\n\t\t\t\t\t\tthis.circleManager.setCircleTargetPull(action.id, action.targetPull);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'SET_CALCULATE_OVERLAP':\n\t\t\t\t\t\tthis.circleManager.setCalculateOverlap(action.calculateOverlap);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'PIN_CIRCLE':\n\t\t\t\t\t\tthis.circleManager.pinCircle(action.id);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'UNPIN_CIRCLE':\n\t\t\t\t\t\tthis.circleManager.unpinCircle(action.id);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 'SET_TARGET':\n\t\t\t\t\t\tthis.setTarget(action.target);\n\t\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\taddCircles(circles) {\n\t\t\tif (Array.isArray(circles) && circles.length) {\n\t\t\t\tcircles.forEach(circle => this.circleManager.addCircle(circle));\n\t\t\t} else {\n\t\t\t\tthrow new Error('Circles array is malformed.');\n\t\t\t}\n\t\t}\n\t\tsetTarget(target) {\n\t\t\tif (target && typeof target.x === 'number' && typeof target.y === 'number') {\n\t\t\t\tthis.circleManager.setTarget(new Vector(target));\n\t\t\t}\n\t\t}\n\t\tupdate() {\n\t\t\tthis.circleManager.updatePositions();\n\t\t}\n\t\tsendPositions(handleResponse) {\n\t\t\tif (handleResponse) {\n\t\t\t\tconst responseData = {\n\t\t\t\t\ttype: 'MOVED',\n\t\t\t\t\tupdatedCircles: this.circleManager.getPositions(),\n\t\t\t\t\ttarget: this.circleManager.desiredTarget,\n\t\t\t\t};\n\t\t\t\tif (this.circleManager.calculateOverlap) {\n\t\t\t\t\tresponseData['overlappingCircles'] = this.circleManager.getOverlappingCircles();\n\t\t\t\t}\n\t\t\t\thandleResponse(responseData);\n\t\t\t}\n\t\t}\n\t}\n\n\tconst workerLogic = new WorkerLogic();\n\tfunction sendResponse(response) {\n\t\tsendWorkerMessage(self, response);\n\t}\n\tself.addEventListener('message', event => {\n\t\tconst message = processWorkerMessage(event);\n\t\tworkerLogic.handleWorkerMessage(message, sendResponse);\n\t});\n\n}));\n"],{type:'text/javascript'})));
-				this.worker.addEventListener('message', this.receivedWorkerMessage.bind(this));
-			} else {
+			{
 				this.workerLogic = new WorkerLogic();
 			}
 
@@ -1521,7 +1327,7 @@
 				this.addCircles(params.circles);
 			}
 
-			if (!this.isContinuousModeActive) {
+			{
 				this.update();
 			}
 		}
@@ -1535,7 +1341,7 @@
 			const response = processWorkerResponse(event);
 
 			if (response) {
-				super.handleWorkerResponse(response);
+				
 				this.updateListeners(response);
 			}
 		}
@@ -1548,12 +1354,10 @@
 		updateWorker(action) {
 			const workerMessage = { messageId: Date.now(), action };
 
-			if (this.useWorker) {
-				sendWorkerMessage(this.worker, workerMessage);
-			} else {
+			{
 				// If no worker is used, we get the result directly via callback
 				this.workerLogic.handleWorkerMessage(workerMessage, response => {
-					super.handleWorkerResponse(response);
+					
 					this.updateListeners(response);
 				});
 			}
@@ -1570,9 +1374,9 @@
 				this.onMove(response.updatedCircles, response.target, response.overlappingCircles);
 			}
 
-			super.updateListeners(response);
+			
 
-			if (!this.isContinuousModeActive) {
+			{
 				this.destroy();
 			}
 		}
@@ -1594,8 +1398,8 @@
 				}
 
 				this.updateWorker({ type: 'ADD_CIRCLES', circles });
-				super.forceMovement();
-				super.startLoop();
+				
+				
 			}
 		}
 
@@ -1622,7 +1426,7 @@
 				throw new Error(`Can't remove circle: the circleRef parameter is malformed.`);
 			} else {
 				this.updateWorker({ type: 'REMOVE_CIRCLE', id: circleId });
-				super.startLoop();
+				
 			}
 		}
 
@@ -1640,7 +1444,7 @@
 				throw new Error(`Can't pin circle: the circleRef parameter is malformed.`);
 			} else {
 				this.updateWorker({ type: 'PIN_CIRCLE', id: circleId });
-				super.startLoop();
+				
 			}
 		}
 
@@ -1658,7 +1462,7 @@
 				throw new Error(`Can't unpin circle: the circleRef parameter is malformed.`);
 			} else {
 				this.updateWorker({ type: 'UNPIN_CIRCLE', id: circleId });
-				super.startLoop();
+				
 			}
 		}
 
@@ -1679,7 +1483,7 @@
 				throw new Error(`Can't set circle radius: the passed radius is malformed.`);
 			} else {
 				this.updateWorker({ type: 'SET_CIRCLE_RADIUS', id: circleId, radius });
-				super.startLoop();
+				
 			}
 		}
 
@@ -1702,7 +1506,7 @@
 					targetPull: !!targetPull,
 				});
 
-				super.startLoop();
+				
 			}
 		}
 
@@ -1713,7 +1517,7 @@
 		 */
 		setTargetPull(targetPull) {
 			this.updateWorker({ type: 'SET_TARGET_PULL', targetPull: !!targetPull });
-			super.startLoop();
+			
 		}
 
 		/**
@@ -1727,7 +1531,7 @@
 				throw new Error(`Can't set bounds: the bounds parameter is malformed.`);
 			} else {
 				this.updateWorker({ type: 'SET_BOUNDS', bounds });
-				super.startLoop();
+				
 			}
 		}
 
@@ -1742,8 +1546,8 @@
 				throw new Error(`Can't set target: the targetPos parameter is malformed.`);
 			} else {
 				this.updateWorker({ type: 'SET_TARGET', target: targetPos });
-				super.forceMovement();
-				super.startLoop();
+				
+				
 			}
 		}
 
@@ -1855,7 +1659,7 @@
 				throw new Error(`Can't start dragging circle: the circleRef parameter is malformed.`);
 			} else {
 				this.updateWorker({ type: 'DRAG_START', id: circleId });
-				super.startLoop();
+				
 			}
 		}
 
@@ -1876,7 +1680,7 @@
 				throw new Error(`Can't drag circle: the position parameter is malformed.`);
 			} else {
 				this.updateWorker({ type: 'DRAG_MOVE', id: circleId, position });
-				super.startLoop();
+				
 			}
 		}
 
@@ -1894,7 +1698,7 @@
 				throw new Error(`Can't end dragging circle: the circleRef parameter is malformed.`);
 			} else {
 				this.updateWorker({ type: 'DRAG_END', id: circleId });
-				super.startLoop();
+				
 			}
 		}
 
@@ -1902,7 +1706,7 @@
 		 * Tear down worker, remove cllbacks
 		 */
 		destroy() {
-			super.destroy();
+			
 
 			if (this.worker) {
 				this.worker.terminate();
@@ -1919,7 +1723,7 @@
 	 * @param {PackParams} params - The params for the circlepacker.
 	 * @returns {PromiseLike<PackResponse>}
 	 */
-	function pack (params = {}) {
+	function pack(params = {}) {
 		return new Promise((resolve, reject) => {
 			/**
 			 * @type {CirclePacker | undefined}
@@ -1949,6 +1753,7 @@
 
 	CirclePacker.pack = pack;
 
-	return CirclePacker;
+	exports.CirclePacker = CirclePacker;
+	exports.pack = pack;
 
 }));

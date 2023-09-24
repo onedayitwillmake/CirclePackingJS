@@ -2,7 +2,7 @@
 // https://github.com/snorpey/CirclePackingJS/blob/master/js-module/web/js/PackedCircle.js
 // by @onedayitwillmake / Mario Gonzalez with some changes by @snorpey
 
-import Vector from './Vector.js';
+import { Vector } from './Vector.js';
 
 /**
  * The Packed circle contains information about a Packed circle
@@ -14,7 +14,7 @@ export default class PackedCircle {
 	 * @constructor
 	 * @param {PackedCircleData} - The data to instantiate the PackedCircle with
 	 */
-	constructor({ id, radius, x, y, isPulledToCenter, isPinned }) {
+	constructor({ id, radius, x, y, isPulledToTarget, isPinned }) {
 		x = x || 0;
 		y = y || 0;
 
@@ -48,7 +48,7 @@ export default class PackedCircle {
 		 *
 		 * @type {boolean}
 		 **/
-		this.isPulledToCenter = isPulledToCenter;
+		this.isPulledToTarget = isPulledToTarget;
 
 		/**
 		 * Is circle pinned inplace
